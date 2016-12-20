@@ -1,6 +1,6 @@
 package org.reactivecouchbase.webstack.tests
 
-import akka.stream.scaladsl.Framing
+import akka.stream.scaladsl.{Framing, Source}
 import akka.util.ByteString
 import org.reactivecouchbase.webstack.WebStackApp
 import org.reactivecouchbase.webstack.actions.Action
@@ -20,6 +20,7 @@ case class User(id: String, name: String, email: String, address: String, phone:
 
 object StreamingRoutes extends WebStackApp with App {
   Post -> "/csv" -> StreamingController.processCsv
+  Post -> "/csv2array" -> StreamingController.processCsvAsJsonArray
   start(Some(8888))
 }
 
@@ -42,6 +43,23 @@ object StreamingController {
       .map(_.toJson)
       .map(Json.stringify)
       .map(u => s"$u\n")
+    // stream out
+    Ok.stream(source).as("application/json-stream")
+  }
+
+  def processCsvAsJsonArray = Action.sync { ctx =>
+    // stream in and process
+    val source = ctx.bodyAsStream
+      .via(Framing.delimiter(ByteString("\n"), 1000))
+      .drop(1)
+      .map(_.utf8String)
+      .map(_.split(";").toSeq)
+      .collect {
+        case Seq(id, name, email, address, phone) => User(id, name, email, address, phone)
+      }
+      .map(_.toJson)
+      .map(Json.stringify)
+      .intersperse("[", ",\n", "]")
     // stream out
     Ok.stream(source).as("application/json")
   }

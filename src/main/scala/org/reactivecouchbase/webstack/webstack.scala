@@ -45,33 +45,40 @@ case class BootstrappedContext(undertow: Undertow, app: WebStackApp) {
 case class RootRoute(app: WebStackApp, method: HttpMethod) {
   def ->(template: String) = TemplateRoute(app, method, template)
   def ⟶(template: String) = TemplateRoute(app, method, template)
+  def on(template: String) = TemplateRoute(app, method, template)
 }
 
 case class RootWSRoute(app: WebStackApp) {
   def ->(template: String) = TemplateWSRoute(app, template)
   def ⟶(template: String) = TemplateWSRoute(app, template)
+  def on(template: String) = TemplateWSRoute(app, template)
 }
 
 case class TemplateRoute(app: WebStackApp, method: HttpMethod, template: String) {
   def ->(action: => Action) = app.route(method, template, action)
   def ⟶(action: => Action) = app.route(method, template, action)
+  def call(action: => Action) = app.route(method, template, action)
 }
 
 case class TemplateWSRoute(app: WebStackApp, template: String) {
   def ->(action: => WebSocketAction) = app.websocketRoute(template, action)
   def ⟶(action: => WebSocketAction) = app.websocketRoute(template, action)
+  def call(action: => WebSocketAction) = app.websocketRoute(template, action)
 }
 
 case class AssetsRoute(app: WebStackApp) {
   def ->(path: String) = AssetsRouteWithPath(app, path)
   def ⟶(path: String) = AssetsRouteWithPath(app, path)
+  def on(path: String) = AssetsRouteWithPath(app, path)
 }
 
 case class AssetsRouteWithPath(app: WebStackApp, path: String) {
   def ->(cpDir: ClassPathDirectory) = app.assets(path, cpDir)
   def ⟶(cpDir: ClassPathDirectory) = app.assets(path, cpDir)
+  def serves(cpDir: ClassPathDirectory) = app.assets(path, cpDir)
   def ->(fsDir: FSDirectory) =        app.assets(path, fsDir)
   def ⟶(fsDir: FSDirectory) =        app.assets(path, fsDir)
+  def serves(fsDir: FSDirectory) =        app.assets(path, fsDir)
 }
 
 case class ClassPathDirectory(path: String)
