@@ -14,9 +14,10 @@
     <logger name="org.xnio.nio" level="WARN"/>
     <logger name="org.jboss.logging" level="WARN"/>
     <logger name="io.undertow.request" level="WARN"/>
+    <logger name="io.undertow.core.request" level="WARN"/>
     <logger name="org.reflections.Reflections" level="ERROR"/>
     <logger name="com.github.jknack.handlebars.internal.HbsParserFactory" level="WARN"/>
-    <logger name="application" level="TRACE" />
+    <logger name="application" level="INFO" />
 
     <root level="ALL">
         <appender-ref ref="STDOUT" />
