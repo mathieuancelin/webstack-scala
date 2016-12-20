@@ -106,6 +106,7 @@ object MyController {
   }
 
   val BigAction = LogBeforeAction.andThen(ApiKeyAction).andThen(LogAfterAction)
+  // val BigAction = LogBeforeAction ~> ApiKeyAction ~> LogAfterAction
 
   def index = BigAction.sync { ctx =>
     Ok.text("Hello World!\n")
