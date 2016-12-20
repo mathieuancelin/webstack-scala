@@ -192,9 +192,7 @@ import akka.http.scaladsl.model.ws._
 import org.reactivecouchbase.webstack.{ClassPathDirectory, WebStackApp}
 
 class Routes extends WebStackApp {
-
-  Ws     ⟶       "/echo"  ⟶         MyController.echo
-
+  Ws ⟶  "/echo"  ⟶   MyController.echo
 }
 
 object MyController {
