@@ -105,8 +105,8 @@ object MyController {
     }
   }
 
-  val BigAction = LogBeforeAction.andThen(ApiKeyAction).andThen(LogAfterAction)
-  // val BigAction = LogBeforeAction ~> ApiKeyAction ~> LogAfterAction
+  val BigAction = LogBeforeAction ~> ApiKeyAction ~> LogAfterAction
+  // val BigAction = LogBeforeAction.andThen(ApiKeyAction).andThen(LogAfterAction)
 
   def index = BigAction.sync { ctx =>
     Ok.text("Hello World!\n")
@@ -116,11 +116,156 @@ object MyController {
 
 ## Streaming support
 
+You can easily stream in / out data off your application
+
+```scala
+import akka.stream.scaladsl.Framing
+import akka.util.ByteString
+import org.reactivecouchbase.webstack.actions.Action
+import org.reactivecouchbase.webstack.env.Env
+import org.reactivecouchbase.webstack.result.Results._
+import play.api.libs.json._
+
+case class User(id: String, name: String, email: String, address: String, phone: String) {
+  def toJson = Json.obj(
+    "id" -> this.id,
+    "name" -> this.name,
+    "email" -> this.email,
+    "address" -> this.address,
+    "phone" -> this.phone
+  )
+}
+
+object MyController {
+
+  implicit val ec  = Env.globalExecutionContext
+  implicit val mat = Env.globalMaterializer
+
+  // Server Sent event
+  def stream = Action.sync { ctx =>
+    Ok.stream(
+      Source.tick(FiniteDuration(0, TimeUnit.SECONDS), FiniteDuration(1, TimeUnit.SECONDS), "")
+        .map(l => Json.obj(
+          "time" ->System.currentTimeMillis(),
+          "value" -> l
+        )).map(Json.stringify).map(j => s"data: $j\n\n")
+    ).as("text/event-stream")
+  }
+
+  // send stream out a file
+  def file = Action.sync { ctx =>
+    Ok.sendFile(new File("/tmp/bigfile.csv"))
+  }
+
+  // curl -X POST --data-binary @/tmp/bigfile.txt -H "Content-Type: text/csv" http://localhost:9000/fromcsv
+  def processCsv = Action.sync { ctx =>
+    // stream in and process
+    val source = ctx.bodyAsStream
+      .via(Framing.delimiter(ByteString("\n")))
+      .drop(1)
+      .map(_.utf8String)
+      .map(_.split(";").toSeq)
+      .collect {
+        case id :: name :: email :: address :: phone :: Nil => User(id, name, email, address, phone)
+      }
+      .map(_.toJson)
+      .map(Json.stringify)
+      .map(u => s"$u\n")
+    // stream out
+    Ok.stream(source).as("application/json")
+  }
+}
+```
+
 ## WebSockets support
+
+You can also expose WebSockets using `Ws` in `Routes`
+
+```scala
+import org.reactivecouchbase.webstack.actions.WebSocketAction
+import org.reactivecouchbase.webstack.websocket.ActorFlow
+import org.reactivecouchbase.webstack.env.Env
+import org.reactivecouchbase.webstack.result.Results._
+import org.reactivecouchbase.webstack.ws.WS
+import akka.actor._
+import akka.http.scaladsl.model.ws._
+
+object MyController {
+
+  implicit val ec  = Env.globalExecutionContext
+  implicit val mat = Env.globalMaterializer
+  implicit val system = Env.globalActorSystem
+
+  def mirror = WebSocketAction.accept { context =>
+    ActorFlow.actorRef(
+      out => EchoActor.props(out)
+    )
+  }
+}
+
+object EchoActor {
+  def props(ref: ActorRef) = Props[EchoActor](new EchoActor(ref))
+}
+
+class EchoActor(out: ActorRef) extends Actor {
+  override def receive = {
+    case m: TextMessage => out ! TextMessage(s"received: ${m.getStrictText}")
+    case m => unhandled(m)
+  }
+}
+```
 
 ## Http client
 
+An http client with streaming capabilities is available too
+
+```scala
+import org.reactivecouchbase.webstack.actions.Action
+import org.reactivecouchbase.webstack.env.Env
+import org.reactivecouchbase.webstack.result.Results._
+import org.reactivecouchbase.webstack.ws.WS
+
+object MyController {
+
+  implicit val ec  = Env.globalExecutionContext
+  implicit val mat = Env.globalMaterializer
+
+  def location = Action.async { ctx =>
+    WS.host("http://freegeoip.net").withPath("/json/")
+      .call()
+      .flatMap(_.body)
+      .map(b => Json.obj("processed_at" -> System.currentTimeMillis) ++ b.as[JsObject])
+      .map(r => Json.prettyPrint(r.json))
+      .map(p => Ok.json(p))
+  }
+}
+```
+
 ## WebSockets client
+
+You can also consume WebSocket from the WS client
+
+```scala
+import org.reactivecouchbase.webstack.actions.Action
+import org.reactivecouchbase.webstack.env.Env
+import org.reactivecouchbase.webstack.result.Results._
+import org.reactivecouchbase.webstack.ws.WS
+
+object MyController {
+
+  implicit val ec  = Env.globalExecutionContext
+  implicit val mat = Env.globalMaterializer
+
+  def location = Action.async { ctx =>
+    val sink = Sink.head[Message]
+    val source = Source.single("Hello World!")
+    val flow = Flow.fromSinkAndSourceMat(sink, source)(Keep.left[Future[Message], Cancellable])
+    WS.websocketHost("ws://echo.websocket.org/").call(flow).materialized.map { message =>
+      Ok.text(message.asTextMessage.getStrictText)
+    }
+  }
+}
+```
 
 ## TODO
 

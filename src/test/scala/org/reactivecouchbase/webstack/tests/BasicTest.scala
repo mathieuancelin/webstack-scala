@@ -1,7 +1,7 @@
 package org.reactivecouchbase.webstack.tests
 
 import java.util.UUID
-import java.util.concurrent.{CompletionStage, TimeUnit}
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 import akka.actor.{Actor, ActorRef, Cancellable, PoisonPill, Props}
@@ -9,18 +9,18 @@ import akka.http.scaladsl.model.HttpMethods
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.stream.actor.{ActorPublisher, ActorPublisherMessage}
 import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
-import org.reactivecouchbase.webstack.{BootstrappedContext, ClassPathDirectory, WebStackApp}
 import org.reactivecouchbase.webstack.actions.{Action, ActionStep}
 import org.reactivecouchbase.webstack.env.Env
 import org.reactivecouchbase.webstack.result.Results
 import org.reactivecouchbase.webstack.result.Results._
 import org.reactivecouchbase.webstack.websocket.{ActorFlow, WebSocketAction, WebSocketContext}
 import org.reactivecouchbase.webstack.ws.WS
+import org.reactivecouchbase.webstack.{BootstrappedContext, ClassPathDirectory, WebStackApp}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import play.api.libs.json.{JsObject, JsString, Json}
 
-import scala.concurrent.{Await, Future, Promise}
 import scala.concurrent.duration.{Duration, FiniteDuration}
+import scala.concurrent.{Await, Future, Promise}
 import scala.util.Success
 
 object BasicTestSpecRoutes extends WebStackApp {
