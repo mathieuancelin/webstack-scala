@@ -75,6 +75,44 @@ object MyController {
 
 ## Action composition
 
+It is possible to create new `Action`s by composition `ActionStep`s
+
+```scala
+import org.reactivecouchbase.webstack.actions.{ Action, ActionStep }
+import org.reactivecouchbase.webstack.env.Env
+import org.reactivecouchbase.webstack.result.Results._
+
+object MyController {
+
+  implicit val ec  = Env.globalExecutionContext
+  implicit val mat = Env.globalMaterializer
+
+  val ApiKeyAction = ActionStep.from { (ctx, block) =>
+    ctx.header("Api-Key") match {
+      case Some(value) if value == "12345" => block(ctx)
+      case None => Future.successful(Results.Unauthorized.json(Json.obj("error" -> "you have to provide an Api-Key")))
+    }
+  }
+
+  val LogBeforeAction = ActionStep.from { (ctx, block) =>
+    Env.logger.info(s"Before call of ${ctx.uri}")
+    block(ctx)
+  }
+
+  val LogAfterAction = ActionStep.from { (ctx, block) =>
+    block(ctx).andThen {
+      case _ => Env.logger.info(s"After call of ${ctx.uri}")
+    }
+  }
+
+  val BigAction = LogBeforeAction.andThen(ApiKeyAction).andThen(LogAfterAction)
+
+  def index = BigAction.sync { ctx =>
+    Ok.text("Hello World!\n")
+  }
+}
+```
+
 ## Streaming support
 
 ## WebSockets support
