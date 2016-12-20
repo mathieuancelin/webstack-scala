@@ -6,6 +6,12 @@ this project is a highly experimental web framework written in scala on top of `
 
 just clone the [empty-project](https://github.com/mathieuancelin/webstack-scala/tree/master/empty-project) directory and your ready to go :-)
 
+```sh
+cd empty-project
+sbt run
+open http://localhost:9000
+```
+
 ## Routes
 
 the routes of your application are located in `app/Routes.scala` and looks like
