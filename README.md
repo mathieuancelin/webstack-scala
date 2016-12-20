@@ -161,12 +161,12 @@ object MyController {
   def processCsv = Action.sync { ctx =>
     // stream in and process
     val source = ctx.bodyAsStream
-      .via(Framing.delimiter(ByteString("\n")))
+      .via(Framing.delimiter(ByteString("\n"), 10000))
       .drop(1)
       .map(_.utf8String)
       .map(_.split(";").toSeq)
       .collect {
-        case id :: name :: email :: address :: phone :: Nil => User(id, name, email, address, phone)
+        case Seq(id, name, email, address, phone) => User(id, name, email, address, phone)
       }
       .map(_.toJson)
       .map(Json.stringify)
