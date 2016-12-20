@@ -8,7 +8,8 @@ just clone the [empty-project](https://github.com/mathieuancelin/webstack-scala/
 
 ```sh
 cd empty-project
-sbt run
+sbt ~re-start
+# or sbt run
 open http://localhost:9000
 ```
 
@@ -284,4 +285,5 @@ object MyController {
 * [ ] Typesafe reverse routing
 * [ ] Various helpers for webdev (codec, etc ...)
 * [ ] Session based on cookie
-* [ ] actual dev flow with hot reload
+* [x] actual dev flow with hot reload
+  * done using sbt-revolver for now
