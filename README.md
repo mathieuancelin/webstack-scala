@@ -189,6 +189,13 @@ import org.reactivecouchbase.webstack.result.Results._
 import org.reactivecouchbase.webstack.ws.WS
 import akka.actor._
 import akka.http.scaladsl.model.ws._
+import org.reactivecouchbase.webstack.{ClassPathDirectory, WebStackApp}
+
+class Routes extends WebStackApp {
+
+  Ws     ⟶       "/echo"  ⟶         MyController.echo
+
+}
 
 object MyController {
 
@@ -196,7 +203,7 @@ object MyController {
   implicit val mat = Env.globalMaterializer
   implicit val system = Env.globalActorSystem
 
-  def mirror = WebSocketAction.accept { context =>
+  def echo = WebSocketAction.accept { context =>
     ActorFlow.actorRef(
       out => EchoActor.props(out)
     )
