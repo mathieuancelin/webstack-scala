@@ -85,8 +85,8 @@ object MyController {
 
 ## TODO
 
-* [_] Typesafe templating system
-* [_] Typesafe reverse routing
-* [_] Various helpers for webdev (codec, etc ...)
-* [_] Session based on cookie
-* [_] actual dev flow with hot reload
+* [ ] Typesafe templating system
+* [ ] Typesafe reverse routing
+* [ ] Various helpers for webdev (codec, etc ...)
+* [ ] Session based on cookie
+* [ ] actual dev flow with hot reload
