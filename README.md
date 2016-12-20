@@ -105,10 +105,10 @@ object MyController {
     }
   }
 
-  val BigAction = LogBeforeAction ~> ApiKeyAction ~> LogAfterAction
-  // val BigAction = LogBeforeAction.andThen(ApiKeyAction).andThen(LogAfterAction)
+  val ManagedAction = LogBeforeAction ~> ApiKeyAction ~> LogAfterAction
+  // val ManagedAction = LogBeforeAction.andThen(ApiKeyAction).andThen(LogAfterAction)
 
-  def index = BigAction.sync { ctx =>
+  def index = ManagedAction.sync { ctx =>
     Ok.text("Hello World!\n")
   }
 }
