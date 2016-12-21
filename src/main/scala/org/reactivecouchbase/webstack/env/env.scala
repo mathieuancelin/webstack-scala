@@ -34,21 +34,21 @@ object Env {
   private val APP_LOGGER: Logger = LoggerFactory.getLogger("application")
 
   private val system = ActorSystem("global-system",
-    configuration.underlying.atPath("webstack.systems.global").withFallback(ConfigFactory.empty()))
+    configuration.underlying.atPath("app.systems.global").withFallback(ConfigFactory.empty()))
   private val materializer = ActorMaterializer.create(system)
   private val executor = system.dispatcher
   // offered to the internals of actions
   private[webstack] val blockingSystem = ActorSystem("blocking-system",
-    configuration.underlying.atPath("webstack.systems.blocking").withFallback(ConfigFactory.empty()))
+    configuration.underlying.atPath("app.systems.blocking").withFallback(ConfigFactory.empty()))
   private[webstack] val blockingActorMaterializer = ActorMaterializer.create(blockingSystem)
   private[webstack] val blockingExecutor = blockingSystem.dispatcher
 
   // offered to the internals of ws
-  private val wsSystem = ActorSystem("ws-system", configuration.underlying.atPath("webstack.systems.ws").withFallback(ConfigFactory.empty()))
+  private val wsSystem = ActorSystem("ws-system", configuration.underlying.atPath("app.systems.ws").withFallback(ConfigFactory.empty()))
   private[webstack] val wsHttp = Http.get(wsSystem)
 
   // offered to the internals of websockets
-  private val websocketSystem = ActorSystem("websocket-system", configuration.underlying.atPath("webstack.systems.websocket").withFallback(ConfigFactory.empty()))
+  private val websocketSystem = ActorSystem("websocket-system", configuration.underlying.atPath("app.systems.websocket").withFallback(ConfigFactory.empty()))
   private[webstack] val websocketExecutionContext = websocketSystem.dispatcher
   private[webstack] val websocketMaterializer = ActorMaterializer.create(websocketSystem)
   private[webstack] val websocketHttp = Http.get(websocketSystem)
@@ -66,8 +66,8 @@ object Env {
 
   def logger: Logger = APP_LOGGER
   def configuration: Configuration = DEFAULT
-  def globalActorSystem: ActorSystem = system
-  def globalMaterializer: Materializer = materializer
-  def globalExecutionContext: ExecutionContext = executor
+  def defaultActorSystem: ActorSystem = system
+  def defaultMaterializer: Materializer = materializer
+  def defaultExecutionContext: ExecutionContext = executor
   lazy val mode: Mode = Mode.valueOf(configuration.getString("app.mode").getOrElse("Prod")).getOrElse(Mode.prod)
 }

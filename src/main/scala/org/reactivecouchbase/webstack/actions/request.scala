@@ -3,14 +3,13 @@ package org.reactivecouchbase.webstack.actions
 import java.net.InetSocketAddress
 
 import akka.http.scaladsl.coding.Gzip
-import akka.stream.{ActorMaterializer, Materializer}
+import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source, StreamConverters}
 import akka.util.ByteString
 import io.undertow.server.HttpServerExchange
-import io.undertow.server.handlers.Cookie
 import org.reactivecouchbase.webstack.env.Env
+import org.reactivecouchbase.webstack.result.{Cookie, Session}
 import org.reactivestreams.Publisher
-import org.w3c.dom.Node
 import play.api.libs.json.{JsValue, Json}
 
 import scala.collection.JavaConversions._
@@ -48,7 +47,7 @@ case class RequestHeaders(private val request: HttpServerExchange) {
 }
 
 class RequestCookies private[actions](val request: HttpServerExchange) {
-  private val cookies: Map[String, Cookie] = Option.apply(request.getRequestCookies).map(_.toMap).getOrElse(Map.empty[String, Cookie])
+  private val cookies: Map[String, Cookie] = Option.apply(request.getRequestCookies).map(_.toMap.mapValues(Cookie.apply)).getOrElse(Map.empty[String, Cookie])
   def raw: Map[String, Cookie] = cookies
   def cookieNames: Seq[String] = cookies.keys.toSeq
   def cookie(name: String): Option[Cookie] = cookies.get(name)
@@ -88,6 +87,7 @@ case class RequestContext(private val state: Map[String, AnyRef], private val un
   def sourceAddress: InetSocketAddress = exchange.getSourceAddress
   def status: Int = exchange.getStatusCode
   def exchange: HttpServerExchange = underlying
+  lazy val session = cookies.cookie(Session.cookieName).map(Session.fromCookie).getOrElse(Session())
 
   // Env.blockingExecutor, Env.blockingActorMaterializer
   def body(implicit ec: ExecutionContext, materializer: Materializer): Future[RequestBody] = {

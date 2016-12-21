@@ -24,7 +24,7 @@ case class WebSocketContext(state: Map[String, AnyRef], exchange: WebSocketHttpE
     }
   }
 
-  def currentExecutor: ExecutionContext = Env.globalExecutionContext
+  def currentExecutor: ExecutionContext = Env.defaultExecutionContext
   def uri: String = exchange.getRequestURI
   def scheme: String = exchange.getRequestScheme
   def queryString: String = exchange.getQueryString

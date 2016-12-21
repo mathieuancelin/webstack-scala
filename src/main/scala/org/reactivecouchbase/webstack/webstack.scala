@@ -145,8 +145,8 @@ object WebStack extends App {
 
   private[webstack] def startWebStackApp(webstackApp: WebStackApp, _port: Option[Int] = None): BootstrappedContext = {
     Env.logger.trace("Starting WebStackApp")
-    val port = _port.orElse(Env.configuration.getInt("webstack.port")).getOrElse(9000)
-    val host = Env.configuration.getString("webstack.host").getOrElse("0.0.0.0")
+    val port = _port.orElse(Env.configuration.getInt("app.port")).getOrElse(9000)
+    val host = Env.configuration.getString("app.host").getOrElse("0.0.0.0")
     val handler = webstackApp.routingHandler.setInvalidMethodHandler(new HttpHandler {
       override def handleRequest(ex: HttpServerExchange): Unit = {
         ex.setStatusCode(400)

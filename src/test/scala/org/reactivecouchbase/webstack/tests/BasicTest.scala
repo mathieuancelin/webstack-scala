@@ -46,9 +46,9 @@ object BasicTestSpecRoutes extends WebStackApp {
 
 object MyController {
 
-  implicit val ec  = Env.globalExecutionContext
-  implicit val mat = Env.globalMaterializer
-  implicit val system = Env.globalActorSystem
+  implicit val ec  = Env.defaultExecutionContext
+  implicit val mat = Env.defaultMaterializer
+  implicit val system = Env.defaultActorSystem
 
   val ApiKeyAction = ActionStep.from { (ctx, block) =>
     ctx.header("Api-Key") match {
@@ -70,7 +70,7 @@ object MyController {
         )).map(Json.stringify).map(j => s"data: $j\n\n")
     ).as("text/event-stream")
     result.matValue[Cancellable].andThen {
-      case Success(c) => Env.globalActorSystem.scheduler.scheduleOnce(FiniteDuration(500, TimeUnit.MILLISECONDS)) {
+      case Success(c) => Env.defaultActorSystem.scheduler.scheduleOnce(FiniteDuration(500, TimeUnit.MILLISECONDS)) {
         c.cancel()
       }
     }
@@ -185,7 +185,7 @@ object WebSocketClientActor {
 
 class WebSocketClientActor(out: ActorRef, promise: Promise[Seq[Message]]) extends Actor {
 
-  implicit val ec = Env.globalExecutionContext
+  implicit val ec = Env.defaultExecutionContext
   val count = new AtomicInteger(0)
   var messages = Seq.empty[Message]
 
@@ -259,8 +259,8 @@ class BasicTestSpec extends FlatSpec with Matchers with BeforeAndAfterAll {
 
   import SpecImplicits._
 
-  implicit val ec  = Env.globalExecutionContext
-  implicit val mat = Env.globalMaterializer
+  implicit val ec  = Env.defaultExecutionContext
+  implicit val mat = Env.defaultMaterializer
 
   var server: BootstrappedContext = _
 
@@ -503,7 +503,7 @@ class BasicTestSpec extends FlatSpec with Matchers with BeforeAndAfterAll {
   }
 
   "Webstack" should "be able to respond with a websocket result that ping 2" in {
-    implicit val system = Env.globalActorSystem
+    implicit val system = Env.defaultActorSystem
     val promise = Promise[Seq[Message]]
     val flow = ActorFlow.actorRef(out => WebSocketClientActor.props(out, promise))
     WS.websocketHost(s"ws://localhost:$port").addPathSegment("websocketping").callNoMat(flow)

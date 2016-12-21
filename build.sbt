@@ -20,6 +20,7 @@ libraryDependencies ++= Seq(
   "com.github.jknack" % "handlebars" % "4.0.6",
   "ch.qos.logback" % "logback-classic" % "1.1.8",
   "org.scala-lang.modules" %% "scala-xml" % "1.0.6",
+  "commons-codec" % "commons-codec" % "1.10",
   "org.scalatest" %% "scalatest" % "2.2.4" % "test"
 
 )

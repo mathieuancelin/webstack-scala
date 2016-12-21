@@ -1,28 +1,21 @@
 package org.reactivecouchbase.webstack.result
 
-import java.io.{ByteArrayInputStream, File, InputStream, StringWriter}
+import java.io.{File, InputStream}
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
-import java.util.Arrays
 import java.util.concurrent.{ConcurrentHashMap, ConcurrentMap}
-import javax.xml.transform.{OutputKeys, Transformer, TransformerFactory}
-import javax.xml.transform.dom.DOMSource
-import javax.xml.transform.stream.StreamResult
 
-import akka.stream.OverflowStrategy
 import akka.stream.scaladsl.{FileIO, Source, StreamConverters}
 import akka.util.ByteString
 import com.github.jknack.handlebars.{Context, Handlebars, Template}
-import com.google.common.base.Throwables
-import io.undertow.server.handlers.Cookie
 import org.reactivestreams.Publisher
-import org.slf4j.{Logger, LoggerFactory}
 import play.api.libs.json.{JsValue, Json}
 
+import scala.collection.immutable.{Iterable => IMterable}
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.reflect.ClassTag
 import scala.util.Try
-import scala.xml.{Elem, XML}
+import scala.xml.Elem
 
 object Results {
   val Continue: Result = new Result(HttpStatus.CONTINUE.value)
@@ -144,34 +137,38 @@ case class Result(status: Int, source: Source[ByteString, _], contentType: Strin
 
   def withBody(source: Publisher[ByteString]): Result = copy(source = Source.fromPublisher(source))
 
+  def withSession(session: Session): Result =  withCookie(session.asCookie)
+
+  def removeSession(): Result = removeCookie(Session().asCookie.copy(discard = true, maxAge = 0))
+
   def text(text: String): Result = {
-    // TODO : avoid IS
-    val source: Source[ByteString, _] = StreamConverters.fromInputStream(() => new ByteArrayInputStream(text.getBytes(StandardCharsets.UTF_8)))
+    val source: Source[ByteString, _] = Source[ByteString](IMterable.concat(text.getBytes(StandardCharsets.UTF_8).grouped(8192).map(ByteString.apply).toSeq))
+    // val source: Source[ByteString, _] = StreamConverters.fromInputStream(() => new ByteArrayInputStream(text.getBytes(StandardCharsets.UTF_8)))
     copy(source = source, contentType = MediaType.TEXT_PLAIN_VALUE)
   }
 
   def json(json: String): Result = {
-    // TODO : avoid IS
-    val source: Source[ByteString, _] = StreamConverters.fromInputStream(() => new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)))
-    copy(source = source, contentType = MediaType.APPLICATION_JSON_VALUE)
+    // val source: Source[ByteString, _] = StreamConverters.fromInputStream(() => new ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)))
+    // copy(source = source, contentType = MediaType.APPLICATION_JSON_VALUE)
+    text(json).as(MediaType.APPLICATION_JSON_VALUE)
   }
 
   def json(json: JsValue): Result = {
-    // TODO : avoid IS
-    val source: Source[ByteString, _] = StreamConverters.fromInputStream(() => new ByteArrayInputStream(Json.stringify(json).getBytes(StandardCharsets.UTF_8)))
-    copy(source = source, contentType = MediaType.APPLICATION_JSON_VALUE)
+    // val source: Source[ByteString, _] = StreamConverters.fromInputStream(() => new ByteArrayInputStream(Json.stringify(json).getBytes(StandardCharsets.UTF_8)))
+    // copy(source = source, contentType = MediaType.APPLICATION_JSON_VALUE)
+    text(Json.stringify(json)).as(MediaType.APPLICATION_JSON_VALUE)
   }
 
   def xml(xml: String): Result = {
-    // TODO : avoid IS
-    val source: Source[ByteString, _] = StreamConverters.fromInputStream(() => new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)))
-    copy(source = source, contentType = MediaType.APPLICATION_XML_VALUE)
+    // val source: Source[ByteString, _] = StreamConverters.fromInputStream(() => new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)))
+    // copy(source = source, contentType = MediaType.APPLICATION_XML_VALUE)
+    text(xml).as(MediaType.APPLICATION_XML_VALUE)
   }
 
   def html(html: String): Result = {
-    // TODO : avoid IS
-    val source: Source[ByteString, Any] = StreamConverters.fromInputStream(() => new ByteArrayInputStream(html.getBytes(StandardCharsets.UTF_8)))
-    copy(source = source, contentType = MediaType.TEXT_HTML_VALUE)
+    // val source: Source[ByteString, Any] = StreamConverters.fromInputStream(() => new ByteArrayInputStream(html.getBytes(StandardCharsets.UTF_8)))
+    // copy(source = source, contentType = MediaType.TEXT_HTML_VALUE)
+    text(html).as(MediaType.TEXT_HTML_VALUE)
   }
 
   def xml(xml: Elem): Result = {
@@ -188,10 +185,10 @@ case class Result(status: Int, source: Source[ByteString, _], contentType: Strin
     copy(source = source, contentType = MediaType.APPLICATION_OCTET_STREAM_VALUE)
   }
 
-  // def binary(bytes: Array[Byte]): Result = {
-  //   val source: Source[ByteString, Any] = Source(bytes).buffer(8192, OverflowStrategy.backpressure).map(ByteString.fromArray)
-  //   copy(source = source, contentType = MediaType.APPLICATION_OCTET_STREAM_VALUE)
-  // }
+  def binary(bytes: Array[Byte]): Result = {
+    val source: Source[ByteString, _] = Source[ByteString](IMterable.concat(bytes.grouped(8192).map(ByteString.apply).toSeq))
+    copy(source = source, contentType = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+  }
 
   def binary(bytes: Publisher[ByteString]): Result = binary(Source.fromPublisher(bytes))
 
@@ -208,8 +205,7 @@ case class Result(status: Int, source: Source[ByteString, _], contentType: Strin
       val p: java.util.Map[String, _] = collection.JavaConversions.mapAsJavaMap(params)
       val context: Context = Context.newBuilder(new Object()).combine(p).build
       val template: String = Result.getTemplate(name).apply(context)
-      val source: Source[ByteString, Any] = Source.single(ByteString.fromString(template))
-      copy(source = source, contentType = MediaType.TEXT_HTML_VALUE)
+      text(template).as(MediaType.TEXT_HTML_VALUE)
     } get
   }
 

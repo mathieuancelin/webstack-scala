@@ -34,10 +34,10 @@ class ReactiveActionHandler(action: => Action) extends HttpHandler {
           }
           case Success(result) => {
             if (exchange.isInIoThread) {
-              Env.logger.warn("Request running in IO thread !!!!");
+              Env.logger.warn("Request running in IO thread !!!!")
             }
             result.headers.foreach(t => exchange.getResponseHeaders.putAll(HttpString.tryFromString(t._1), t._2.toList))
-            result.cookies.foreach(c => exchange.getResponseCookies.put(c.getName, c))
+            result.cookies.foreach(c => exchange.getResponseCookies.put(c.name, c.undertowCookie))
             exchange.setStatusCode(result.status)
             exchange.getResponseHeaders.put(Headers.CONTENT_TYPE, result.contentType)
             exchange.getResponseHeaders.put(HttpString.tryFromString("Transfer-Encoding"), "chunked")

@@ -44,8 +44,8 @@ import org.reactivecouchbase.webstack.result.Results._
 
 object MyController {
 
-  implicit val ec  = Env.globalExecutionContext
-  implicit val mat = Env.globalMaterializer
+  implicit val ec  = Env.defaultExecutionContext
+  implicit val mat = Env.defaultMaterializer
 
   def index = Action.sync { ctx =>
     // return the handlebars template located in res/templates/index.html
@@ -91,8 +91,8 @@ import org.reactivecouchbase.webstack.result.Results._
 
 object MyController {
 
-  implicit val ec  = Env.globalExecutionContext
-  implicit val mat = Env.globalMaterializer
+  implicit val ec  = Env.defaultExecutionContext
+  implicit val mat = Env.defaultMaterializer
 
   val ApiKeyAction = ActionStep.from { (ctx, block) =>
     ctx.header("Api-Key") match {
@@ -145,8 +145,8 @@ case class User(id: String, name: String, email: String, address: String, phone:
 
 object MyController {
 
-  implicit val ec  = Env.globalExecutionContext
-  implicit val mat = Env.globalMaterializer
+  implicit val ec  = Env.defaultExecutionContext
+  implicit val mat = Env.defaultMaterializer
 
   // Server Sent event
   def stream = Action.sync { ctx =>
@@ -204,9 +204,9 @@ class Routes extends WebStackApp {
 
 object MyController {
 
-  implicit val ec  = Env.globalExecutionContext
-  implicit val mat = Env.globalMaterializer
-  implicit val system = Env.globalActorSystem
+  implicit val ec  = Env.defaultExecutionContext
+  implicit val mat = Env.defaultMaterializer
+  implicit val system = Env.defaultActorSystem
 
   def echo = WebSocketAction.accept { context =>
     ActorFlow.actorRef(
@@ -239,8 +239,8 @@ import org.reactivecouchbase.webstack.ws.WS
 
 object MyController {
 
-  implicit val ec  = Env.globalExecutionContext
-  implicit val mat = Env.globalMaterializer
+  implicit val ec  = Env.defaultExecutionContext
+  implicit val mat = Env.defaultMaterializer
 
   def location = Action.async { ctx =>
     WS.host("http://freegeoip.net").withPath("/json/")
@@ -265,8 +265,8 @@ import org.reactivecouchbase.webstack.ws.WS
 
 object MyController {
 
-  implicit val ec  = Env.globalExecutionContext
-  implicit val mat = Env.globalMaterializer
+  implicit val ec  = Env.defaultExecutionContext
+  implicit val mat = Env.defaultMaterializer
 
   def location = Action.async { ctx =>
     val sink = Sink.head[Message]
@@ -283,7 +283,7 @@ object MyController {
 
 * [ ] Typesafe templating system
 * [ ] Typesafe reverse routing
-* [ ] Various helpers for webdev (codec, etc ...)
-* [ ] Session based on cookie
+* [x] Various helpers for webdev (codec, etc ...)
+* [x] Session based on cookie
 * [x] actual dev flow with hot reload
   * done using sbt-revolver for now

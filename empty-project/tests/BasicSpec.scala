@@ -18,8 +18,8 @@ class BasicTestSpec extends FlatSpec with Matchers with BeforeAndAfterAll {
 
   import SpecImplicits._
 
-  implicit val ec  = Env.globalExecutionContext
-  implicit val mat = Env.globalMaterializer
+  implicit val ec  = Env.defaultExecutionContext
+  implicit val mat = Env.defaultMaterializer
 
   var server: BootstrappedContext = _
   val port = 7002

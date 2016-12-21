@@ -26,8 +26,8 @@ object StreamingRoutes extends WebStackApp with App {
 
 object StreamingController {
 
-  implicit val ec  = Env.globalExecutionContext
-  implicit val mat = Env.globalMaterializer
+  implicit val ec  = Env.defaultExecutionContext
+  implicit val mat = Env.defaultMaterializer
 
   // curl -X POST --data-binary @/tmp/bigfile.txt -H "Content-Type: text/csv" http://localhost:9000/fromcsv
   def processCsv = Action.sync { ctx =>

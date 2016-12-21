@@ -6,8 +6,8 @@ import org.reactivecouchbase.webstack.result.Results._
 
 object HomeController {
 
-  implicit val ec  = Env.globalExecutionContext
-  implicit val mat = Env.globalMaterializer
+  implicit val ec  = Env.defaultExecutionContext
+  implicit val mat = Env.defaultMaterializer
 
   def index = Action.sync { ctx =>
     Ok.template("index",
