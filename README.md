@@ -112,7 +112,7 @@ object MyController {
     }
   }
 
-  val ManagedAction = LogBeforeAction ↝ ApiKeyAction ↝ LogAfterAction
+  val ManagedAction = LogBeforeAction ~> ApiKeyAction ~> LogAfterAction
   // val ManagedAction = LogBeforeAction.andThen(ApiKeyAction).andThen(LogAfterAction)
 
   def index = ManagedAction.sync { ctx =>
