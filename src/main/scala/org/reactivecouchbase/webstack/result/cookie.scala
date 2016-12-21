@@ -6,7 +6,6 @@ import javax.crypto.spec.SecretKeySpec
 
 import io.undertow.server.handlers.{CookieImpl, Cookie => UndertowCookie}
 import org.apache.commons.codec.digest.DigestUtils
-import org.joda.time.DateTime
 import org.reactivecouchbase.webstack.env.Env
 import org.reactivecouchbase.webstack.libs.Codecs
 import play.api.libs.json.{JsObject, JsString, Json}
@@ -19,7 +18,6 @@ case class Cookie(
  path: String,
  domain: String,
  maxAge: Integer,
- expires: DateTime,
  discard: Boolean = false,
  secure: Boolean,
  httpOnly: Boolean,
@@ -32,7 +30,6 @@ case class Cookie(
       .setPath(path)
       .setDomain(domain)
       .setMaxAge(maxAge)
-      .setExpires(expires.toDate)
       .setDiscard(discard)
       .setSecure(secure)
       .setHttpOnly(httpOnly)
@@ -49,7 +46,6 @@ object Cookie {
     path = cookie.getPath,
     domain = cookie.getDomain,
     maxAge = cookie.getMaxAge,
-    expires = new DateTime(cookie.getExpires),
     discard = cookie.isDiscard,
     secure = cookie.isSecure,
     httpOnly = cookie.isHttpOnly,
@@ -88,10 +84,10 @@ object Session {
 }
 
 case class Session(underlying: collection.Map[String, String] = Map.empty[String, String]) {
-  def add(tuple: (String, String)): Session = copy(underlying = underlying + tuple)
-  def +(tuple: (String, String)): Session = copy(underlying = underlying + tuple)
-  def remove(key: String): Session = copy(underlying = underlying - key)
-  def -(key: String): Session = copy(underlying = underlying - key)
+  def add(tuple: (String, String)*): Session = copy(underlying = underlying ++ tuple)
+  def +(tuple: (String, String)*): Session = copy(underlying = underlying ++ tuple)
+  def remove(key: String*): Session = copy(underlying = underlying -- key)
+  def -(key: String*): Session = copy(underlying = underlying -- key)
   def get(key: String): Option[String] = underlying.get(key)
   def apply(key: String): Option[String] = underlying.get(key)
   private[webstack] def asCookie: Cookie = {
@@ -102,7 +98,6 @@ case class Session(underlying: collection.Map[String, String] = Map.empty[String
       path = Session.cookiePath,
       domain = Session.cookieDomain,
       maxAge = Session.cookieMaxAge,
-      expires = DateTime.now().plusSeconds(Session.cookieMaxAge),
       discard = false,
       secure = Session.cookieSecure,
       httpOnly = Session.cookieHttpOnly

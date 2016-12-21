@@ -8,6 +8,7 @@ import java.util.concurrent.{ConcurrentHashMap, ConcurrentMap}
 import akka.stream.scaladsl.{FileIO, Source, StreamConverters}
 import akka.util.ByteString
 import com.github.jknack.handlebars.{Context, Handlebars, Template}
+import org.reactivecouchbase.webstack.actions.RequestContext
 import org.reactivestreams.Publisher
 import play.api.libs.json.{JsValue, Json}
 
@@ -124,9 +125,7 @@ case class Result(status: Int, source: Source[ByteString, _], contentType: Strin
       case None => copy(headers = headers + (key -> Seq(value)))
     }
   }
-
-  // TODO : add session support
-
+  
   def withStatus(status: Int): Result = copy(status = status)
 
   def withCookie(cookie: Cookie): Result = copy(cookies = cookies :+ cookie)
@@ -138,6 +137,25 @@ case class Result(status: Int, source: Source[ByteString, _], contentType: Strin
   def withBody(source: Publisher[ByteString]): Result = copy(source = Source.fromPublisher(source))
 
   def withSession(session: Session): Result =  withCookie(session.asCookie)
+
+  def withSession(values: (String, String)*): Result =  withSession(Session(values.toMap))
+
+  def withSession(values: Map[String, String]): Result =  withSession(Session(values))
+
+  def addToSession(values: (String, String)*)(implicit rc: RequestContext): Result = {
+    val session = rc.cookies.raw.find(_._1 == Session.cookieName).flatMap(t => Session.fromCookie(t._2)).getOrElse(Session()).add(values:_*)
+    withSession(session)
+  }
+
+  def addToSession(values: Map[String, String])(implicit rc: RequestContext): Result = {
+    val session = rc.cookies.raw.find(_._1 == Session.cookieName).flatMap(t => Session.fromCookie(t._2)).getOrElse(Session()).add(values.toSeq:_*)
+    withSession(session)
+  }
+
+  def removeFromSession(values: String*)(implicit rc: RequestContext): Result = {
+    val session = rc.cookies.raw.find(_._1 == Session.cookieName).flatMap(t => Session.fromCookie(t._2)).getOrElse(Session()).remove(values:_*)
+    withSession(session)
+  }
 
   def removeSession(): Result = removeCookie(Session().asCookie.copy(discard = true, maxAge = 0))
 

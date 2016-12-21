@@ -87,7 +87,9 @@ case class RequestContext(private val state: Map[String, AnyRef], private val un
   def sourceAddress: InetSocketAddress = exchange.getSourceAddress
   def status: Int = exchange.getStatusCode
   def exchange: HttpServerExchange = underlying
-  lazy val session = cookies.cookie(Session.cookieName).map(Session.fromCookie).getOrElse(Session())
+  lazy val session: Session = {
+    cookies.cookie(Session.cookieName).flatMap(Session.fromCookie).getOrElse(Session())
+  }
 
   // Env.blockingExecutor, Env.blockingActorMaterializer
   def body(implicit ec: ExecutionContext, materializer: Materializer): Future[RequestBody] = {
