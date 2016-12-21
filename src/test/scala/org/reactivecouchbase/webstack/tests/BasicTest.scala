@@ -25,22 +25,22 @@ import scala.util.Success
 
 object BasicTestSpecRoutes extends WebStackApp {
 
-  Get    ⟶   "/hello/{name}"      ⟶   MyController.hello
-  Get    ⟶   "/sayhello"          ⟶   MyController.index
-  Get    ⟶   "/sse"               ⟶   MyController.stream
-  Get    ⟶   "/sse2"              ⟶   MyController.stream2
-  Get    ⟶   "/test"              ⟶   MyController.text
-  Get    ⟶   "/huge"              ⟶   MyController.hugeText
-  Get    ⟶   "/json"              ⟶   MyController.json
-  Get    ⟶   "/html"              ⟶   MyController.html
-  Get    ⟶   "/template"          ⟶   MyController.template
-  Get    ⟶   "/ws"                ⟶   MyController.testWS
-  Get    ⟶   "/ws2"               ⟶   MyController.testWS2
-  Post   ⟶   "/post"              ⟶   MyController.testPost
-  Ws     ⟶   "/websocketping"     ⟶   MyController.webSocketPing
-  Ws     ⟶   "/websocketsimple"   ⟶   MyController.simpleWebsocket
-  Ws     ⟶   "/websocket/{id}"    ⟶   MyController.webSocketWithContext
-  Assets ⟶   "/assets"            ⟶   ClassPathDirectory("public")
+  Get    →   "/hello/{name}"      →   MyController.hello
+  Get    →   "/sayhello"          →   MyController.index
+  Get    →   "/sse"               →   MyController.stream
+  Get    →   "/sse2"              →   MyController.stream2
+  Get    →   "/test"              →   MyController.text
+  Get    →   "/huge"              →   MyController.hugeText
+  Get    →   "/json"              →   MyController.json
+  Get    →   "/html"              →   MyController.html
+  Get    →   "/template"          →   MyController.template
+  Get    →   "/ws"                →   MyController.testWS
+  Get    →   "/ws2"               →   MyController.testWS2
+  Post   →   "/post"              →   MyController.testPost
+  Ws     →   "/websocketping"     →   MyController.webSocketPing
+  Ws     →   "/websocketsimple"   →   MyController.simpleWebsocket
+  Ws     →   "/websocket/{id}"    →   MyController.webSocketWithContext
+  Assets →   "/assets"            →   ClassPathDirectory("public")
 
 }
 

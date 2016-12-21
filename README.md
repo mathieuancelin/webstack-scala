@@ -23,12 +23,12 @@ import org.reactivecouchbase.webstack.{ClassPathDirectory, WebStackApp}
 
 class Routes extends WebStackApp {
 
-  Get    ⟶       "/"           ⟶         HomeController.index
-  Get    ⟶       "/users"      ⟶         HomeController.users
-  Post   ⟶       "/users"      ⟶         HomeController.createUser
-  Get    ⟶       "/users/{id}" ⟶         HomeController.user
-  Ws     ⟶       "/websocket"  ⟶         HomeController.websocket
-  Assets ⟶       "/assets"     ⟶         ClassPathDirectory("public")
+  Get    →       "/"           →         HomeController.index
+  Get    →       "/users"      →         HomeController.users
+  Post   →       "/users"      →         HomeController.createUser
+  Get    →       "/users/{id}" →         HomeController.user
+  Ws     →       "/websocket"  →         HomeController.websocket
+  Assets →       "/assets"     →         ClassPathDirectory("public")
 
 }
 ```
@@ -112,7 +112,7 @@ object MyController {
     }
   }
 
-  val ManagedAction = LogBeforeAction ~> ApiKeyAction ~> LogAfterAction
+  val ManagedAction = LogBeforeAction ↝ ApiKeyAction ↝ LogAfterAction
   // val ManagedAction = LogBeforeAction.andThen(ApiKeyAction).andThen(LogAfterAction)
 
   def index = ManagedAction.sync { ctx =>
@@ -199,7 +199,7 @@ import akka.http.scaladsl.model.ws._
 import org.reactivecouchbase.webstack.{ClassPathDirectory, WebStackApp}
 
 class Routes extends WebStackApp {
-  Ws ⟶  "/echo"  ⟶   MyController.echo
+  Ws →  "/echo"  →   MyController.echo
 }
 
 object MyController {

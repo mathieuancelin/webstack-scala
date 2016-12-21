@@ -94,4 +94,5 @@ trait ActionStep {
 
   def andThen(other: ActionStep): ActionStep = combine(other)
   def ~>(other: ActionStep): ActionStep = combine(other)
+  def ↝(other: ActionStep): ActionStep = combine(other)
 }
