@@ -60,10 +60,6 @@ object Env {
     websocketSystem.terminate()
   }
 
-  Runtime.getRuntime.addShutdownHook(new Thread(new Runnable {
-    override def run(): Unit = stopEnv()
-  }))
-
   def logger: Logger = APP_LOGGER
   def configuration: Configuration = DEFAULT
   def defaultActorSystem: ActorSystem = system

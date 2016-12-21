@@ -22,9 +22,7 @@ class ReactiveActionHandler(action: => Action) extends HttpHandler {
       override def run(): Unit = {
         // TODO : find a better way to pass the execution context and materializer
         implicit val ec = Env.blockingExecutor
-        if (exchange.isInIoThread) {
-          Env.logger.warn("Request processed in IO thread !!!!")
-        }
+        if (exchange.isInIoThread) Env.logger.warn("Request processed in IO thread !!!!")
         action.run(exchange).andThen {
           case Failure(e) => {
             exchange.setStatusCode(500)
@@ -33,9 +31,7 @@ class ReactiveActionHandler(action: => Action) extends HttpHandler {
             exchange.endExchange()
           }
           case Success(result) => {
-            if (exchange.isInIoThread) {
-              Env.logger.warn("Request running in IO thread !!!!")
-            }
+            if (exchange.isInIoThread) Env.logger.warn("Request running in IO thread !!!!")
             result.headers.foreach(t => exchange.getResponseHeaders.putAll(HttpString.tryFromString(t._1), t._2.toList))
             result.cookies.foreach(c => exchange.getResponseCookies.put(c.name, c.undertowCookie))
             exchange.setStatusCode(result.status)

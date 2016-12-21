@@ -1,4 +1,4 @@
-package org.reactivecouchbase.webstack.result
+package org.reactivecouchbase.webstack.mvc
 
 import java.nio.charset.StandardCharsets
 import javax.crypto.Mac
@@ -14,13 +14,13 @@ import scala.util.Try
 
 case class Cookie(
  name: String,
- value: String,
- path: String,
- domain: String,
- maxAge: Integer,
+ value: String = "",
+ path: String = "/",
+ domain: String = "localhost",
+ maxAge: Integer = -1,
  discard: Boolean = false,
- secure: Boolean,
- httpOnly: Boolean,
+ secure: Boolean = false,
+ httpOnly: Boolean = false,
  version: Int = 0,
  comment: String = ""
 ) {
@@ -39,7 +39,6 @@ case class Cookie(
 }
 
 object Cookie {
-
   private[webstack] def apply(cookie: UndertowCookie): Cookie = Cookie(
     name = cookie.getName,
     value = cookie.getValue,
@@ -63,11 +62,13 @@ object Session {
   private[webstack] lazy val cookieMaxAge = Env.configuration.getInt("app.session.maxAge").getOrElse(-1)
   private[webstack] lazy val secret = DigestUtils.md5Hex(Env.configuration.getString("app.secret").getOrElse("Some hardcoded value here"))
     .getBytes(StandardCharsets.UTF_8)
+
   private[webstack] def sign(message: String, key: Array[Byte]): String = {
     val mac = Mac.getInstance("HmacSHA1")
     mac.init(new SecretKeySpec(key, "HmacSHA1"))
     Codecs.toHexString(mac.doFinal(message.getBytes(StandardCharsets.UTF_8)))
   }
+
   private[webstack] def fromCookie(cookie: Cookie): Option[Session] = {
     Try {
       val signature = cookie.value.split(":::")(0)

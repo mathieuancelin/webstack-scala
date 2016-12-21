@@ -52,6 +52,6 @@ case class Configuration(underlying: Config) {
   }
 
   def at(path: String): Configuration = {
-    new Configuration(underlying.atPath(path).withFallback(ConfigFactory.empty()))
+    Configuration(underlying.atPath(path).withFallback(ConfigFactory.empty()))
   }
 }
