@@ -4,7 +4,7 @@ import akka.Done
 import akka.stream.scaladsl.{Keep, Sink}
 import io.undertow.server.{HttpHandler, HttpServerExchange}
 import io.undertow.util.{Headers, HttpString}
-import org.reactivecouchbase.webstack.env.Env
+import org.reactivecouchbase.webstack.env.EnvLike
 import play.api.libs.json.Json
 
 import scala.collection.JavaConversions._
@@ -12,17 +12,17 @@ import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 
 object ReactiveActionHandler {
-  def apply(action: => Action): ReactiveActionHandler = new ReactiveActionHandler(action)
+  def apply(env: EnvLike, action: => Action): ReactiveActionHandler = new ReactiveActionHandler(env, action)
 }
 
-class ReactiveActionHandler(action: => Action) extends HttpHandler {
+class ReactiveActionHandler(env: EnvLike, action: => Action) extends HttpHandler {
   def handleRequest(exchange: HttpServerExchange) {
     exchange.setMaxEntitySize(Long.MaxValue)
     exchange.dispatch(new Runnable {
       override def run(): Unit = {
         // TODO : find a better way to pass the execution context and materializer
-        implicit val ec = Env.blockingExecutor
-        if (exchange.isInIoThread) Env.logger.warn("Request processed in IO thread !!!!")
+        implicit val ec = env.blockingExecutionContext
+        if (exchange.isInIoThread) env.logger.warn("Request processed in IO thread !!!!")
         action.run(exchange).andThen {
           case Failure(e) => {
             exchange.setStatusCode(500)
@@ -31,7 +31,7 @@ class ReactiveActionHandler(action: => Action) extends HttpHandler {
             exchange.endExchange()
           }
           case Success(result) => {
-            if (exchange.isInIoThread) Env.logger.warn("Request running in IO thread !!!!")
+            if (exchange.isInIoThread) env.logger.warn("Request running in IO thread !!!!")
             result.headers.foreach(t => exchange.getResponseHeaders.putAll(HttpString.tryFromString(t._1), t._2.toList))
             result.cookies.foreach(c => exchange.getResponseCookies.put(c.name, c.undertowCookie))
             exchange.setStatusCode(result.status)
@@ -44,7 +44,7 @@ class ReactiveActionHandler(action: => Action) extends HttpHandler {
               result.source
                 .toMat(Sink.foreach { bs =>
                   responseChannel.write(bs.asByteBuffer)
-                })(Keep.both[Any, Future[Done]]).run()(Env.blockingActorMaterializer)
+                })(Keep.both[Any, Future[Done]]).run()(env.blockingMaterializer)
             result.materializedValue.trySuccess(first)
             def endExchange() = {
               Try {
@@ -52,7 +52,7 @@ class ReactiveActionHandler(action: => Action) extends HttpHandler {
                 exchange.endExchange()
               } match {
                 case Success(e) => e
-                case Failure(e) => Env.logger.error("Error while ending exchange", e)
+                case Failure(e) => env.logger.error("Error while ending exchange", e)
               }
             }
             second.andThen {

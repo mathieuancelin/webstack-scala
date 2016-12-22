@@ -10,7 +10,7 @@ import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.stream.actor.{ActorPublisher, ActorPublisherMessage}
 import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
 import org.reactivecouchbase.webstack.actions.{Action, ActionStep}
-import org.reactivecouchbase.webstack.env.Env
+import org.reactivecouchbase.webstack.env.{ Env => Env }
 import org.reactivecouchbase.webstack.result.Results
 import org.reactivecouchbase.webstack.result.Results._
 import org.reactivecouchbase.webstack.websocket.{ActorFlow, WebSocketAction, WebSocketContext}
@@ -267,7 +267,7 @@ class BasicTestSpec extends FlatSpec with Matchers with BeforeAndAfterAll {
   val port = 7001
 
   override protected def beforeAll(): Unit = {
-    server = BasicTestSpecRoutes.start(Some(port))
+    server = BasicTestSpecRoutes.start(port = Some(port))
   }
 
   override protected def afterAll(): Unit = {

@@ -1,7 +1,7 @@
 package org.reactivecouchbase.webstack.actions
 
 import io.undertow.server.HttpServerExchange
-import org.reactivecouchbase.webstack.env.Env
+import org.reactivecouchbase.webstack.env.{ EnvLike, Env }
 import org.reactivecouchbase.webstack.result.{Result, Results}
 import play.api.libs.json.Json
 
@@ -14,7 +14,7 @@ object Action {
     Try(block.apply(request)) match {
       case Success(s) => s
       case Failure(e) => {
-        Env.logger.error("Empty action error", e)
+        request.env.logger.error("Empty action error", e)
         Future.successful(transformError(e, request))
       }
     }
@@ -24,12 +24,12 @@ object Action {
     Results.InternalServerError.json(Json.obj("error" -> t.getMessage)) // TODO : throwable writer
   }
 
-  def sync(block: RequestContext => Result): Action = {
-    emptyAction.sync(block)
+  def sync(block: RequestContext => Result)(implicit env: EnvLike = Env): Action = {
+    emptyAction.sync(block)(env)
   }
 
-  def async(block: RequestContext => Future[Result])(implicit ec: ExecutionContext): Action = {
-    emptyAction.async(block)(ec)
+  def async(block: RequestContext => Future[Result])(implicit env: EnvLike = Env, ec: ExecutionContext): Action = {
+    emptyAction.async(block)(env, ec)
   }
 }
 
@@ -60,28 +60,28 @@ trait ActionStep {
     Try(this.invoke(request, block)) match {
       case Success(e) => e
       case Failure(e) => {
-        Env.logger.error("innerInvoke action error", e)
+        request.env.logger.error("innerInvoke action error", e)
         Future.successful(Action.transformError(e, request))
       }
     }
   }
 
-  def sync(block: Function[RequestContext, Result]): Action = {
+  def sync(block: Function[RequestContext, Result])(implicit env: EnvLike = Env): Action = {
     // TODO : find a better way to pass the execution context
-    implicit val ec = Env.blockingExecutor
+    implicit val ec = env.blockingExecutionContext
     async { req => Future {
       Try(block.apply(req)) match {
         case Success(e) => e
         case Failure(e) => {
-          Env.logger.error("Sync action error", e)
+          env.logger.error("Sync action error", e)
           Action.transformError(e, req)
         }
       }
     } }
   }
 
-  def async(block: RequestContext => Future[Result])(implicit ec: ExecutionContext): Action = {
-    def rcBuilder(ex: HttpServerExchange) = new RequestContext(Map.empty[String, AnyRef], ex, ec)
+  def async(block: RequestContext => Future[Result])(implicit env: EnvLike = Env, ec: ExecutionContext): Action = {
+    def rcBuilder(ex: HttpServerExchange) = new RequestContext(Map.empty[String, AnyRef], ex, env, ec)
     new Action(this, rcBuilder, block, ec)
   }
 

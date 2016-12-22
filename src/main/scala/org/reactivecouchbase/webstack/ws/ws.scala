@@ -12,7 +12,7 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Sink, Source, StreamConverters}
 import akka.util.ByteString
 import org.reactivecouchbase.webstack.StreamUtils
-import org.reactivecouchbase.webstack.env.Env
+import org.reactivecouchbase.webstack.env.{EnvLike, Env}
 import org.reactivestreams.{Processor, Publisher}
 import play.api.libs.json.{JsValue, Json}
 
@@ -22,18 +22,18 @@ import scala.xml.{Elem, XML}
 
 object WS {
 
-  def host(host: String, _port: Int = 80): WSRequest = {
+  def host(host: String, _port: Int = 80)(implicit env: EnvLike = Env): WSRequest = {
     val port = Option(host).map(_.replace("http://", "").replace("https://", "")).filter(_.contains(":")).map(_.split(":")(1).toInt).getOrElse(_port)
     if (host.startsWith("https")) {
-      val connectionFlow = Env.wsHttp.outgoingConnectionHttps(host.replace(s":$port", "").replace("https://", ""), port)
+      val connectionFlow = env.wsHttp.outgoingConnectionHttps(host.replace(s":$port", "").replace("https://", ""), port)
       WSRequest(connectionFlow, host, port)
     } else {
-      val connectionFlow = Env.wsHttp.outgoingConnection(host.replace(s":$port", "").replace("http://", ""), port)
+      val connectionFlow = env.wsHttp.outgoingConnection(host.replace(s":$port", "").replace("http://", ""), port)
       WSRequest(connectionFlow, host, port)
     }
   }
 
-  def websocketHost(host: String): WebSocketClientRequest = WebSocketClientRequest(host, "")
+  def websocketHost(host: String)(implicit env: EnvLike = Env): WebSocketClientRequest = WebSocketClientRequest(env, host, "")
 }
 
 case class WSBody(bytes: ByteString) {
@@ -84,7 +84,7 @@ case class WSResponse(underlying: HttpResponse) {
 }
 
 case class WSRequest(
-  connectionFlow: Flow[HttpRequest, HttpResponse, Future[OutgoingConnection]],
+  private val connectionFlow: Flow[HttpRequest, HttpResponse, Future[OutgoingConnection]],
   host: String,
   port: Int,
   path: String = "",
@@ -193,6 +193,7 @@ case class WSRequest(
 case class WebSocketConnections[T](response: Future[WebSocketUpgradeResponse], materialized: T)
 
 case class WebSocketClientRequest(
+  private val env: EnvLike,
   host: String,
   path: String,
   headers: Map[String, Seq[String]] = Map.empty[String, Seq[String]],
@@ -239,7 +240,7 @@ case class WebSocketClientRequest(
     val url: String = host + path.replace("//", "/") + (if (queryParams.isEmpty) ""
     else "?" + _queryString)
     val request = _headers.foldLeft[WebSocketRequest](WebSocketRequest(url))((r, header) => r.copy(extraHeaders = r.extraHeaders :+ header))
-    val (connected, closed) = Env.websocketHttp.singleWebSocketRequest(request, flow)
+    val (connected, closed) = env.websocketHttp.singleWebSocketRequest(request, flow)
     WebSocketConnections[T](connected, closed)
   }
 
@@ -249,7 +250,7 @@ case class WebSocketClientRequest(
     val url = host + path.replace("//", "/") + (if (queryParams.isEmpty) ""
     else "?" + _queryString)
     val request = _headers.foldLeft[WebSocketRequest](WebSocketRequest(url))((r, header) => r.copy(extraHeaders = r.extraHeaders :+ header))
-    val (connected, _) = Env.websocketHttp.singleWebSocketRequest(request, flow)
+    val (connected, _) = env.websocketHttp.singleWebSocketRequest(request, flow)
     connected
   }
 }

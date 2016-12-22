@@ -2,19 +2,19 @@ package org.reactivecouchbase.webstack.websocket
 
 import io.undertow.websockets.core.WebSocketChannel
 import io.undertow.websockets.spi.WebSocketHttpExchange
-import org.reactivecouchbase.webstack.env.Env
+import org.reactivecouchbase.webstack.env.EnvLike
 
 import scala.collection.JavaConversions._
 import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
 
-case class WebSocketContext(state: Map[String, AnyRef], exchange: WebSocketHttpExchange, channel: WebSocketChannel) {
+case class WebSocketContext(state: Map[String, AnyRef], exchange: WebSocketHttpExchange, channel: WebSocketChannel, env: EnvLike) {
 
   lazy val headers = WebSocketRequestHeaders(exchange)
   lazy val queryParams = WebSocketRequestQueryParams(exchange)
   lazy val pathParams = WebSocketRequestPathParams(exchange)
 
-  def currentExecutionContext: ExecutionContext = Env.defaultExecutionContext
+  def currentExecutionContext: ExecutionContext = env.websocketExecutionContext
   def uri: String = exchange.getRequestURI
   def scheme: String = exchange.getRequestScheme
   def queryString: String = exchange.getQueryString
@@ -27,7 +27,7 @@ case class WebSocketContext(state: Map[String, AnyRef], exchange: WebSocketHttpE
     if (key == null || value == null) {
       this
     } else {
-      WebSocketContext(state + (key -> value), exchange, channel)
+      WebSocketContext(state + (key -> value), exchange, channel, env)
     }
   }
 }

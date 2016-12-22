@@ -7,7 +7,7 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source, StreamConverters}
 import akka.util.ByteString
 import io.undertow.server.HttpServerExchange
-import org.reactivecouchbase.webstack.env.Env
+import org.reactivecouchbase.webstack.env.EnvLike
 import org.reactivecouchbase.webstack.mvc.{Cookie, Session}
 import org.reactivestreams.Publisher
 import play.api.libs.json.{JsValue, Json}
@@ -80,14 +80,14 @@ case class RequestBody(bytes: ByteString) {
   lazy val urlForm: Map[String, List[String]] = safeUrlFrom.get
 }
 
-case class RequestContext(private val state: Map[String, AnyRef], exchange: HttpServerExchange, currentExecutionContext: ExecutionContext) {
+case class RequestContext(private val state: Map[String, AnyRef], exchange: HttpServerExchange, env: EnvLike, currentExecutionContext: ExecutionContext) {
 
   lazy val headers = RequestHeaders(exchange)
   lazy val queryParams = RequestQueryParams(exchange)
   lazy val cookies = RequestCookies(exchange)
   lazy val pathParams = RequestPathParams(exchange)
-  lazy val configuration = Env.configuration
-  lazy val session = cookies.cookie(Session.cookieName).flatMap(Session.fromCookie).getOrElse(Session())
+  lazy val configuration = env.configuration
+  lazy val session = cookies.cookie(env.sessionConfig.cookieName).flatMap(Session.fromCookie).getOrElse(Session())
 
   def uri: String = exchange.getRequestURI
   def method: String = exchange.getRequestMethod.toString
@@ -112,7 +112,7 @@ case class RequestContext(private val state: Map[String, AnyRef], exchange: Http
   def getValue[T](key: String)(implicit ct: ClassTag[T]): Option[T] = state.get(key).flatMap(ct.unapply)
   def setValue(key: String, value: AnyRef): RequestContext = {
     if (key == null || value == null) this
-    else RequestContext(state + (key -> value), exchange, currentExecutionContext)
+    else RequestContext(state + (key -> value), exchange, env, currentExecutionContext)
   }
 
   def body(implicit ec: ExecutionContext, materializer: Materializer): Future[RequestBody] = {

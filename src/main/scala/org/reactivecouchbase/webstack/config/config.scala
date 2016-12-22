@@ -5,6 +5,11 @@ import com.typesafe.config.{Config, ConfigFactory}
 import scala.collection.JavaConversions._
 import scala.util.Try
 
+object Configuration {
+  def default: Configuration = Configuration(ConfigFactory.load)
+  def apply(value: String): Configuration = Configuration(ConfigFactory.parseString(value))
+}
+
 case class Configuration(underlying: Config) {
 
   private def readValue[T](path: String, supplier: => T): Option[T] = {

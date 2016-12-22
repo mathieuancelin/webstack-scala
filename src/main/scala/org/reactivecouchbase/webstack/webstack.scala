@@ -10,7 +10,7 @@ import io.undertow.server.{HttpHandler, HttpServerExchange}
 import io.undertow.util.HttpString
 import io.undertow.{Handlers, Undertow}
 import org.reactivecouchbase.webstack.actions.{Action, ReactiveActionHandler}
-import org.reactivecouchbase.webstack.env.Env
+import org.reactivecouchbase.webstack.env.{EnvLike, Env}
 import org.reactivecouchbase.webstack.websocket.{ReactiveWebSocketHandler, WebSocketAction}
 import org.reflections.Reflections
 import play.api.libs.json.Json
@@ -18,11 +18,11 @@ import play.api.libs.json.Json
 import scala.collection.JavaConversions._
 import scala.util.Try
 
-case class BootstrappedContext(undertow: Undertow, app: WebStackApp) {
+case class BootstrappedContext(undertow: Undertow, app: WebStackApp, env: EnvLike) {
 
   private val stopped = new AtomicBoolean(false)
 
-  Env.logger.trace("Registering shutdown hook")
+  env.logger.trace("Registering shutdown hook")
   Runtime.getRuntime.addShutdownHook(new Thread(new Runnable {
     override def run(): Unit = stop
   }))
@@ -34,9 +34,9 @@ case class BootstrappedContext(undertow: Undertow, app: WebStackApp) {
         app.beforeStop
         undertow.stop
         app.afterStop
-        Env.stopEnv()
+        env.stop()
       } catch {
-        case e: Exception => Env.logger.error("Error while stopping server")
+        case e: Exception => env.logger.error("Error while stopping server")
       }
     }
   }
@@ -73,12 +73,12 @@ case class AssetsRoute(app: WebStackApp) {
 }
 
 case class AssetsRouteWithPath(app: WebStackApp, path: String) {
-  def ->(cpDir: ClassPathDirectory) = app.assets(path, cpDir)
-  def →(cpDir: ClassPathDirectory) = app.assets(path, cpDir)
+  def ->(cpDir: ClassPathDirectory)     = app.assets(path, cpDir)
+  def →(cpDir: ClassPathDirectory)      = app.assets(path, cpDir)
   def serves(cpDir: ClassPathDirectory) = app.assets(path, cpDir)
-  def ->(fsDir: FSDirectory) =        app.assets(path, fsDir)
-  def →(fsDir: FSDirectory) =        app.assets(path, fsDir)
-  def serves(fsDir: FSDirectory) =        app.assets(path, fsDir)
+  def ->(fsDir: FSDirectory)            = app.assets(path, fsDir)
+  def →(fsDir: FSDirectory)             = app.assets(path, fsDir)
+  def serves(fsDir: FSDirectory)        = app.assets(path, fsDir)
 }
 
 case class ClassPathDirectory(path: String)
@@ -87,25 +87,28 @@ case class FSDirectory(path: File)
 class WebStackApp {
 
   private[webstack] val routingHandler = Handlers.routing()
+  private[webstack] lazy val _defaultEnv = Env
 
-  def route(method: HttpMethod, url: String, action: => Action) {
-    Env.logger.debug(s"Add route on ${method.value} -> $url")
-    routingHandler.add(method.name, url, ReactiveActionHandler(action))
+  def route(method: HttpMethod, url: String, action: => Action)() {
+    // env.logger.debug(s"Add route on ${method.value} -> $url")
+    routingHandler.add(method.name, url, ReactiveActionHandler(env, action))
   }
 
   def assets(url: String, dir: ClassPathDirectory): Unit = {
-    Env.logger.debug(s"Add assets on $url -> ${dir.path}")
+    // env.logger.debug(s"Add assets on $url -> ${dir.path}")
     routingHandler.setFallbackHandler(path().addPrefixPath(url, resource(new ClassPathResourceManager(classOf[WebStackApp].getClassLoader, dir.path))))
   }
 
   def assets(url: String, dir: FSDirectory): Unit = {
-    Env.logger.debug(s"Add assets on $url -> ${dir.path}")
+    // env.logger.debug(s"Add assets on $url -> ${dir.path}")
     routingHandler.setFallbackHandler(path().addPrefixPath(url, resource(new FileResourceManager(dir.path, 0))))
   }
 
   def websocketRoute(url: String, action: => WebSocketAction) {
-    routingHandler.add("GET", url, Handlers.websocket(new ReactiveWebSocketHandler(action)))
+    routingHandler.add("GET", url, Handlers.websocket(new ReactiveWebSocketHandler(env, action)))
   }
+
+  def env: EnvLike = _defaultEnv
 
   def beforeStart {}
 
@@ -115,7 +118,7 @@ class WebStackApp {
 
   def afterStop {}
 
-  def start(port: Option[Int] = None): BootstrappedContext = WebStack.startWebStackApp(this, port)
+  def start(host: Option[String] = None, port: Option[Int] = None): BootstrappedContext = WebStack.startWebStackApp(this, host, port, env)
 
   val Connect = RootRoute(this, HttpMethods.CONNECT)
   val Delete  = RootRoute(this, HttpMethods.DELETE )
@@ -141,10 +144,15 @@ object WebStack extends App {
     } get
   }.getOrElse(Env.logger.error("No implementation of WebStackApp found :("))
 
-  private[webstack] def startWebStackApp(webstackApp: WebStackApp, _port: Option[Int] = None): BootstrappedContext = {
-    Env.logger.trace("Starting WebStackApp")
-    val port = _port.orElse(Env.configuration.getInt("app.port")).getOrElse(9000)
-    val host = Env.configuration.getString("app.host").getOrElse("0.0.0.0")
+  private[webstack] def startWebStackApp(
+          webstackApp: WebStackApp,
+          _host: Option[String] = None,
+          _port: Option[Int] = None,
+          env: EnvLike = Env): BootstrappedContext = {
+    val port = _port.orElse(env.configuration.getInt("app.port")).getOrElse(9000)
+    val host = _host.orElse(env.configuration.getString("app.host")).getOrElse("0.0.0.0")
+
+    env.logger.trace("Starting WebStackApp")
     val handler = webstackApp.routingHandler.setInvalidMethodHandler(new HttpHandler {
       override def handleRequest(ex: HttpServerExchange): Unit = {
         ex.setStatusCode(400)
@@ -154,7 +162,7 @@ object WebStack extends App {
         )))
       }
     })
-    Env.logger.trace("Starting Undertow")
+    env.logger.trace("Starting Undertow")
     val server = Undertow
       .builder()
       .addHttpListener(port, host)
@@ -163,10 +171,10 @@ object WebStack extends App {
     webstackApp.beforeStart
     server.start()
     webstackApp.afterStart
-    Env.logger.trace("Undertow started")
-    Env.logger.info("Running WebStack on http://" + host + ":" + port)
-    val bootstrapedContext = BootstrappedContext(server, webstackApp)
-    Env.logger.trace("Init done")
+    env.logger.trace("Undertow started")
+    env.logger.info("Running WebStack on http://" + host + ":" + port)
+    val bootstrapedContext = BootstrappedContext(server, webstackApp, env)
+    env.logger.trace("Init done")
     bootstrapedContext
   }
 }

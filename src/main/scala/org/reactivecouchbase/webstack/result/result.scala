@@ -10,6 +10,7 @@ import akka.util.ByteString
 import com.github.jknack.handlebars.{Context, Handlebars, Template}
 import org.reactivecouchbase.webstack.StreamUtils
 import org.reactivecouchbase.webstack.actions.RequestContext
+import org.reactivecouchbase.webstack.env.{EnvLike, Env}
 import org.reactivecouchbase.webstack.mvc.{Cookie, Session}
 import org.reactivestreams.Publisher
 import play.api.libs.json.{JsValue, Json}
@@ -92,21 +93,6 @@ object Results extends Results {
 
 }
 
-object Result {
-  // TODO : move in Env
-  private val handlebars: Handlebars = TemplatesBoilerplate("/templates", ".html").handlebars
-  private val TEMPLATES_CACHE: ConcurrentMap[String, Template] = new ConcurrentHashMap[String, Template]
-  private def getTemplate(name: String): Template = {
-    if (!TEMPLATES_CACHE.containsKey(name)) {
-      Try {
-        val template: Template = handlebars.compile(name)
-        TEMPLATES_CACHE.putIfAbsent(name, template)
-      } get
-    }
-    TEMPLATES_CACHE.get(name)
-  }
-}
-
 case class Result(
   status: Int,
   source: Source[ByteString, _] = Source.empty[ByteString],
@@ -144,17 +130,17 @@ case class Result(
   def withSession(values: Map[String, String]): Result =  withSession(Session(values))
 
   def addToSession(values: (String, String)*)(implicit rc: RequestContext): Result = {
-    val session = rc.cookies.raw.find(_._1 == Session.cookieName).flatMap(t => Session.fromCookie(t._2)).getOrElse(Session()).add(values:_*)
+    val session = rc.cookies.raw.find(_._1 == rc.env.sessionConfig.cookieName).flatMap(t => Session.fromCookie(t._2)).getOrElse(Session()).add(values:_*)
     withSession(session)
   }
 
   def addToSession(values: Map[String, String])(implicit rc: RequestContext): Result = {
-    val session = rc.cookies.raw.find(_._1 == Session.cookieName).flatMap(t => Session.fromCookie(t._2)).getOrElse(Session()).add(values.toSeq:_*)
+    val session = rc.cookies.raw.find(_._1 == rc.env.sessionConfig.cookieName).flatMap(t => Session.fromCookie(t._2)).getOrElse(Session()).add(values.toSeq:_*)
     withSession(session)
   }
 
   def removeFromSession(values: String*)(implicit rc: RequestContext): Result = {
-    val session = rc.cookies.raw.find(_._1 == Session.cookieName).flatMap(t => Session.fromCookie(t._2)).getOrElse(Session()).remove(values:_*)
+    val session = rc.cookies.raw.find(_._1 == rc.env.sessionConfig.cookieName).flatMap(t => Session.fromCookie(t._2)).getOrElse(Session()).remove(values:_*)
     withSession(session)
   }
 
@@ -197,11 +183,11 @@ case class Result(
     copy(source = Source.single(bytes), contentType = MediaType.APPLICATION_OCTET_STREAM_VALUE)
   }
 
-  def template(name: String, params: Map[String, _]): Result = {
+  def template(name: String, params: Map[String, _])(implicit env: EnvLike = Env): Result = {
     Try {
       val p: java.util.Map[String, _] = collection.JavaConversions.mapAsJavaMap(params)
       val context: Context = Context.newBuilder(new Object()).combine(p).build
-      val template: String = Result.getTemplate(name).apply(context)
+      val template: String = env.templateResolver.getTemplate(name).apply(context)
       text(template).as(MediaType.TEXT_HTML_VALUE)
     } get
   }

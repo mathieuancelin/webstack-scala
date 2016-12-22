@@ -6,7 +6,8 @@ import javax.crypto.spec.SecretKeySpec
 
 import io.undertow.server.handlers.{CookieImpl, Cookie => UndertowCookie}
 import org.apache.commons.codec.digest.DigestUtils
-import org.reactivecouchbase.webstack.env.Env
+import org.reactivecouchbase.webstack.config.Configuration
+import org.reactivecouchbase.webstack.env.{EnvLike, Env}
 import org.reactivecouchbase.webstack.libs.Codecs
 import play.api.libs.json.{JsObject, JsString, Json}
 
@@ -54,14 +55,6 @@ object Cookie {
 }
 
 object Session {
-  private[webstack] lazy val cookieDomain = Env.configuration.getString("app.session.domain").getOrElse("localhost")
-  private[webstack] lazy val cookieName = Env.configuration.getString("app.session.cookieName").getOrElse("webstack-session")
-  private[webstack] lazy val cookiePath = Env.configuration.getString("app.session.path").getOrElse("/")
-  private[webstack] lazy val cookieSecure = Env.configuration.getBoolean("app.session.secure").getOrElse(true)
-  private[webstack] lazy val cookieHttpOnly = Env.configuration.getBoolean("app.session.httpOnly").getOrElse(true)
-  private[webstack] lazy val cookieMaxAge = Env.configuration.getInt("app.session.maxAge").getOrElse(-1)
-  private[webstack] lazy val secret = DigestUtils.md5Hex(Env.configuration.getString("app.secret").getOrElse("Some hardcoded value here"))
-    .getBytes(StandardCharsets.UTF_8)
 
   private[webstack] def sign(message: String, key: Array[Byte]): String = {
     val mac = Mac.getInstance("HmacSHA1")
@@ -69,11 +62,11 @@ object Session {
     Codecs.toHexString(mac.doFinal(message.getBytes(StandardCharsets.UTF_8)))
   }
 
-  private[webstack] def fromCookie(cookie: Cookie): Option[Session] = {
+  private[webstack] def fromCookie(cookie: Cookie)(implicit env: EnvLike = Env): Option[Session] = {
     Try {
       val signature = cookie.value.split(":::")(0)
       val value = cookie.value.split(":::")(1)
-      val maybeSignature = Session.sign(value, Session.secret)
+      val maybeSignature = Session.sign(value, env.sessionConfig.secret)
       if (signature == maybeSignature) {
         val map: collection.Map[String, String] = Json.parse(value).as[JsObject].value.mapValues(_.as[String])
         Some(Session(map))
@@ -91,17 +84,28 @@ case class Session(underlying: collection.Map[String, String] = Map.empty[String
   def -(key: String*): Session = copy(underlying = underlying -- key)
   def get(key: String): Option[String] = underlying.get(key)
   def apply(key: String): Option[String] = underlying.get(key)
-  private[webstack] def asCookie: Cookie = {
+  private[webstack] def asCookie(implicit env: EnvLike = Env): Cookie = {
     val value = Json.stringify(JsObject.apply(underlying.mapValues(JsString.apply)))
     Cookie(
-      name = Session.cookieName,
-      value = Session.sign(value, Session.secret) + ":::" + value,
-      path = Session.cookiePath,
-      domain = Session.cookieDomain,
-      maxAge = Session.cookieMaxAge,
+      name = env.sessionConfig.cookieName,
+      value = Session.sign(value, env.sessionConfig.secret) + ":::" + value,
+      path = env.sessionConfig.cookiePath,
+      domain = env.sessionConfig.cookieDomain,
+      maxAge = env.sessionConfig.cookieMaxAge,
       discard = false,
-      secure = Session.cookieSecure,
-      httpOnly = Session.cookieHttpOnly
+      secure = env.sessionConfig.cookieSecure,
+      httpOnly = env.sessionConfig.cookieHttpOnly
     )
   }
+}
+
+class SessionConfig(configuration: Configuration) {
+  lazy val cookieDomain = configuration.getString("app.session.domain").getOrElse("localhost")
+  lazy val cookieName = configuration.getString("app.session.cookieName").getOrElse("webstack-session")
+  lazy val cookiePath = configuration.getString("app.session.path").getOrElse("/")
+  lazy val cookieSecure = configuration.getBoolean("app.session.secure").getOrElse(true)
+  lazy val cookieHttpOnly = configuration.getBoolean("app.session.httpOnly").getOrElse(true)
+  lazy val cookieMaxAge = configuration.getInt("app.session.maxAge").getOrElse(-1)
+  lazy val secret = DigestUtils.md5Hex(configuration.getString("app.secret").getOrElse("Some hardcoded value here"))
+    .getBytes(StandardCharsets.UTF_8)
 }

@@ -5,26 +5,26 @@ import java.util.concurrent.ConcurrentHashMap
 
 import akka.http.scaladsl.model.ws.{BinaryMessage, Message, TextMessage}
 import akka.stream.OverflowStrategy
-import akka.stream.scaladsl.{Flow, Sink, Source, SourceQueueWithComplete}
+import akka.stream.scaladsl.{Sink, Source, SourceQueueWithComplete}
 import akka.util.ByteString
 import io.undertow.websockets.WebSocketConnectionCallback
 import io.undertow.websockets.core._
 import io.undertow.websockets.spi.WebSocketHttpExchange
-import org.reactivecouchbase.webstack.env.Env
+import org.reactivecouchbase.webstack.env.EnvLike
 import org.xnio.ChannelListener
 
-class ReactiveWebSocketHandler(supplier: => WebSocketAction) extends WebSocketConnectionCallback {
+class ReactiveWebSocketHandler(env: EnvLike, supplier: => WebSocketAction) extends WebSocketConnectionCallback {
 
   val handler = supplier.handler
   val connections = new ConcurrentHashMap[String, SourceQueueWithComplete[Message]]
 
   def onConnect(exchange: WebSocketHttpExchange, channel: WebSocketChannel) {
-    implicit val ec = Env.websocketExecutionContext
-    implicit val mat = Env.websocketMaterializer
+    implicit val ec = env.websocketExecutionContext
+    implicit val mat = env.websocketMaterializer
     val id = UUID.randomUUID.toString
     try {
       val queue: Source[Message, SourceQueueWithComplete[Message]] = Source.queue(50, OverflowStrategy.backpressure)
-      val ctx = WebSocketContext(Map.empty[String, AnyRef], exchange, channel)
+      val ctx = WebSocketContext(Map.empty[String, AnyRef], exchange, channel, env)
       handler(ctx).onSuccess {
         case f => {
           val matQueue = queue.via(f).to(Sink.foreach {
@@ -35,14 +35,14 @@ class ReactiveWebSocketHandler(supplier: => WebSocketAction) extends WebSocketCo
             case _ => try {
               exchange.endExchange();
             } catch {
-              case e: Exception => Env.logger.error("Error while closing websocket session", e)
+              case e: Exception => env.logger.error("Error while closing websocket session", e)
             }
           }
           connections.put(id, matQueue)
         }
       }
     } catch {
-      case e: Exception => Env.logger.error("Error after Websocket connection established", e)
+      case e: Exception => env.logger.error("Error after Websocket connection established", e)
     }
 
     val listener: ChannelListener[WebSocketChannel] = new AbstractReceiveListener() {
@@ -51,7 +51,7 @@ class ReactiveWebSocketHandler(supplier: => WebSocketAction) extends WebSocketCo
         try {
           get(id).foreach(queue => queue.offer(TextMessage(message.getData)))
         } catch {
-          case e: Exception => Env.logger.error("Error while handling Websocket message", e)
+          case e: Exception => env.logger.error("Error while handling Websocket message", e)
         }
       }
 
@@ -60,7 +60,7 @@ class ReactiveWebSocketHandler(supplier: => WebSocketAction) extends WebSocketCo
           val bs = message.getData.getResource.toSeq.map(ByteString.fromByteBuffer).foldLeft(ByteString.empty)((a, b) => a.concat(b))
           get(id).foreach(queue => queue.offer(BinaryMessage(bs)))
         } catch {
-          case e: Exception => Env.logger.error("Error while handling Websocket message", e)
+          case e: Exception => env.logger.error("Error while handling Websocket message", e)
         }
       }
 
@@ -69,7 +69,7 @@ class ReactiveWebSocketHandler(supplier: => WebSocketAction) extends WebSocketCo
           get(id).foreach(_.complete())
           connections.remove(id)
         } catch {
-          case e: Exception => Env.logger.error("Error after closing Websocket connection", e)
+          case e: Exception => env.logger.error("Error after closing Websocket connection", e)
         }
       }
     }
