@@ -1,5 +1,6 @@
 package org.reactivecouchbase.webstack.tests
 
+import org.joda.time.DateTime
 import org.reactivecouchbase.webstack.WebStackApp
 import org.reactivecouchbase.webstack.actions.Action
 import org.reactivecouchbase.webstack.config.Configuration
@@ -9,9 +10,11 @@ import play.api.libs.json.Json
 
 class Routes1 extends WebStackApp {
 
-  lazy val _env = EnvLike(Configuration("""app.value = "service1""""), "service1")
-  lazy val controller = new ServiceController()(_env)
-  override def env = _env
+  // define env and controller instances
+  implicit val env = EnvLike(Configuration("""app.value = "service1""""), "service1")
+  val controller = new ServiceController()
+
+  // define routes
 
   Get -> "/service" -> controller.service
 
@@ -19,9 +22,11 @@ class Routes1 extends WebStackApp {
 
 class Routes2 extends WebStackApp {
 
-  lazy val _env = EnvLike(Configuration("""app.value = "service2""""), "service2")
-  lazy val controller = new ServiceController()(_env)
-  override def env = _env
+  // define env and controller instances
+  implicit val env = EnvLike(Configuration("""app.value = "service2""""), "service2")
+  val controller = new ServiceController()
+
+  // define routes
 
   Get -> "/service" -> controller.service
 
@@ -32,7 +37,7 @@ class ServiceController()(implicit env: EnvLike) extends Controller {
   implicit val ec = env.defaultActorSystem
 
   def service = Action.sync { ctx =>
-    env.logger.info(s"Service called at ${System.currentTimeMillis()}")
+    env.logger.info(s"Service called at ${DateTime.now()}")
     val value = env.configuration.getString("app.value").getOrElse("Not found :(")
     Ok.json(Json.obj(
       "value" -> value

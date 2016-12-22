@@ -88,7 +88,7 @@ case class Session(underlying: collection.Map[String, String] = Map.empty[String
     val value = Json.stringify(JsObject.apply(underlying.mapValues(JsString.apply)))
     Cookie(
       name = env.sessionConfig.cookieName,
-      value = Session.sign(value, env.sessionConfig.secret) + ":::" + value,
+      value = s"${Session.sign(value, env.sessionConfig.secret)}:::$value",
       path = env.sessionConfig.cookiePath,
       domain = env.sessionConfig.cookieDomain,
       maxAge = env.sessionConfig.cookieMaxAge,

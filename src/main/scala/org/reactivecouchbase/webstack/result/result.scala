@@ -202,5 +202,5 @@ case class Result(
 
   def matValue[T](implicit ct: ClassTag[T], ec: ExecutionContext): Future[T] = materializedValue.future.map(e => ct.unapply(e).get)
 
-  override def toString: String = "Result { " + status + ", " + contentType + ", [ " + headers.mkString(", ") + " ], " + source + " }"
+  override def toString: String = s"Result { $status, $contentType, [ ${headers.mkString(", ")} ], $source }"
 }

@@ -55,15 +55,15 @@ case class RootWSRoute(app: WebStackApp) {
 }
 
 case class TemplateRoute(app: WebStackApp, method: HttpMethod, template: String) {
-  def ->(action: => Action) = app.route(method, template, action)
-  def →(action: => Action) = app.route(method, template, action)
-  def call(action: => Action) = app.route(method, template, action)
+  def ->(action: => Action)(implicit env: EnvLike = Env) = app.route(method, template, action)(env)
+  def →(action: => Action)(implicit env: EnvLike = Env) = app.route(method, template, action)(env)
+  def call(action: => Action)(implicit env: EnvLike = Env) = app.route(method, template, action)(env)
 }
 
 case class TemplateWSRoute(app: WebStackApp, template: String) {
-  def ->(action: => WebSocketAction) = app.websocketRoute(template, action)
-  def →(action: => WebSocketAction) = app.websocketRoute(template, action)
-  def call(action: => WebSocketAction) = app.websocketRoute(template, action)
+  def ->(action: => WebSocketAction)(implicit env: EnvLike = Env) = app.websocketRoute(template, action)(env)
+  def →(action: => WebSocketAction)(implicit env: EnvLike = Env) = app.websocketRoute(template, action)(env)
+  def call(action: => WebSocketAction)(implicit env: EnvLike = Env) = app.websocketRoute(template, action)(env)
 }
 
 case class AssetsRoute(app: WebStackApp) {
@@ -87,10 +87,9 @@ case class FSDirectory(path: File)
 class WebStackApp {
 
   private[webstack] val routingHandler = Handlers.routing()
-  private[webstack] lazy val _defaultEnv = Env
 
-  def route(method: HttpMethod, url: String, action: => Action)() {
-    // env.logger.debug(s"Add route on ${method.value} -> $url")
+  def route(method: HttpMethod, url: String, action: => Action)(implicit env: EnvLike = Env) {
+    env.logger.debug(s"Add route on ${method.value} -> $url")
     routingHandler.add(method.name, url, ReactiveActionHandler(env, action))
   }
 
@@ -104,11 +103,10 @@ class WebStackApp {
     routingHandler.setFallbackHandler(path().addPrefixPath(url, resource(new FileResourceManager(dir.path, 0))))
   }
 
-  def websocketRoute(url: String, action: => WebSocketAction) {
+  def websocketRoute(url: String, action: => WebSocketAction)(implicit env: EnvLike = Env) {
+    env.logger.debug(s"Add websocket on -> $url")
     routingHandler.add("GET", url, Handlers.websocket(new ReactiveWebSocketHandler(env, action)))
   }
-
-  def env: EnvLike = _defaultEnv
 
   def beforeStart {}
 
@@ -118,7 +116,7 @@ class WebStackApp {
 
   def afterStop {}
 
-  def start(host: Option[String] = None, port: Option[Int] = None): BootstrappedContext = WebStack.startWebStackApp(this, host, port, env)
+  def start(host: Option[String] = None, port: Option[Int] = None)(implicit env: EnvLike = Env): BootstrappedContext = WebStack.startWebStackApp(this, host, port, env)
 
   val Connect = RootRoute(this, HttpMethods.CONNECT)
   val Delete  = RootRoute(this, HttpMethods.DELETE )
@@ -145,13 +143,12 @@ object WebStack extends App {
   }.getOrElse(Env.logger.error("No implementation of WebStackApp found :("))
 
   private[webstack] def startWebStackApp(
-          webstackApp: WebStackApp,
-          _host: Option[String] = None,
-          _port: Option[Int] = None,
-          env: EnvLike = Env): BootstrappedContext = {
-    val port = _port.orElse(env.configuration.getInt("app.port")).getOrElse(9000)
-    val host = _host.orElse(env.configuration.getString("app.host")).getOrElse("0.0.0.0")
-
+      webstackApp: WebStackApp,
+      maybeHost: Option[String] = None,
+      maybePort: Option[Int] = None,
+      env: EnvLike = Env): BootstrappedContext = {
+    val port = maybePort.orElse(env.configuration.getInt("app.port")).getOrElse(9000)
+    val host = maybeHost.orElse(env.configuration.getString("app.host")).getOrElse("0.0.0.0")
     env.logger.trace("Starting WebStackApp")
     val handler = webstackApp.routingHandler.setInvalidMethodHandler(new HttpHandler {
       override def handleRequest(ex: HttpServerExchange): Unit = {
@@ -172,7 +169,7 @@ object WebStack extends App {
     server.start()
     webstackApp.afterStart
     env.logger.trace("Undertow started")
-    env.logger.info("Running WebStack on http://" + host + ":" + port)
+    env.logger.info(s"Running WebStack on http://$host:$port")
     val bootstrapedContext = BootstrappedContext(server, webstackApp, env)
     env.logger.trace("Init done")
     bootstrapedContext

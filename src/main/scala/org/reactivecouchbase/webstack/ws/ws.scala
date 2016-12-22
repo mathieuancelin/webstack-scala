@@ -96,7 +96,7 @@ case class WSRequest(
 ) {
 
   def withPath(path: String): WSRequest = copy(path = path)
-  def addPathSegment(segment: String): WSRequest = copy(path = path + "/" + segment)
+  def addPathSegment(segment: String): WSRequest = copy(path = s"$path/$segment")
   def addPathSegment(path: Any): WSRequest = addPathSegment(path.toString)
   def withMethod(method: HttpMethod): WSRequest = copy(method = method)
   def withMethod(method: String): WSRequest = copy(method = HttpMethods.getForKey(method).get)
@@ -176,7 +176,7 @@ case class WSRequest(
 
   def call()(implicit ec: ExecutionContext, materializer: Materializer): Future[WSResponse] = {
     val _queryString = queryParams.toSeq.flatMap(tuple => tuple._2.map(v => tuple._1 + "=" + v)).mkString("&")
-    val qstr = if (queryParams.isEmpty) "" else "?" + _queryString
+    val qstr = if (queryParams.isEmpty) "" else s"?${_queryString}"
     val _headers = headers.toSeq.flatMap(tuple => tuple._2.map(v => HttpHeader.parse(tuple._1, v))).collect { case Ok(h, _) => h }
     val request: HttpRequest = HttpRequest(
       method = method,
@@ -222,9 +222,9 @@ case class WebSocketClientRequest(
     }
   }
 
-  def addPathSegment(value: String): WebSocketClientRequest = copy(path = path + "/" + value)
+  def addPathSegment(value: String): WebSocketClientRequest = copy(path = s"$path/$value")
 
-  def addPathSegment(value: Any): WebSocketClientRequest = copy(path = path + "/" + value.toString)
+  def addPathSegment(value: Any): WebSocketClientRequest = copy(path = s"$path/${value.toString}")
 
   def callNoMat(flow: Processor[Message, Message])(implicit executionContext: ExecutionContext, materializer: Materializer): Future[WebSocketUpgradeResponse] = {
     callNoMat(Flow.fromProcessor(() => flow))
@@ -237,8 +237,7 @@ case class WebSocketClientRequest(
   def call[T](flow: Flow[Message, Message, T])(implicit executionContext: ExecutionContext, materializer: Materializer): WebSocketConnections[T] = {
     val _queryString = queryParams.toList.flatMap(tuple => tuple._2.map(v => tuple._1 + "=" + v)).mkString("&")
     val _headers = headers.toList.flatMap(tuple => tuple._2.map(v => RawHeader(tuple._1, v)))
-    val url: String = host + path.replace("//", "/") + (if (queryParams.isEmpty) ""
-    else "?" + _queryString)
+    val url: String = host + path.replace("//", "/") + (if (queryParams.isEmpty) "" else "?" + _queryString)
     val request = _headers.foldLeft[WebSocketRequest](WebSocketRequest(url))((r, header) => r.copy(extraHeaders = r.extraHeaders :+ header))
     val (connected, closed) = env.websocketHttp.singleWebSocketRequest(request, flow)
     WebSocketConnections[T](connected, closed)
@@ -247,8 +246,7 @@ case class WebSocketClientRequest(
   def callNoMat(flow: Flow[Message, Message, _])(implicit executionContext: ExecutionContext, materializer: Materializer): Future[WebSocketUpgradeResponse] = {
     val _queryString = queryParams.toList.flatMap(tuple => tuple._2.map(v => tuple._1 + "=" + v)).mkString("&")
     val _headers = headers.toList.flatMap(tuple => tuple._2.map(v => RawHeader(tuple._1, v)))
-    val url = host + path.replace("//", "/") + (if (queryParams.isEmpty) ""
-    else "?" + _queryString)
+    val url = host + path.replace("//", "/") + (if (queryParams.isEmpty) "" else "?" + _queryString)
     val request = _headers.foldLeft[WebSocketRequest](WebSocketRequest(url))((r, header) => r.copy(extraHeaders = r.extraHeaders :+ header))
     val (connected, _) = env.websocketHttp.singleWebSocketRequest(request, flow)
     connected
