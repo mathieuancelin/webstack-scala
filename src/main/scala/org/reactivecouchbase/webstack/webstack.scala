@@ -96,13 +96,11 @@ class WebStackApp {
   def assets(url: String, dir: ClassPathDirectory): Unit = {
     Env.logger.debug(s"Add assets on $url -> ${dir.path}")
     routingHandler.setFallbackHandler(path().addPrefixPath(url, resource(new ClassPathResourceManager(classOf[WebStackApp].getClassLoader, dir.path))))
-    // routingHandler.add("GET", url, resource(new ClassPathResourceManager(classOf[WebStackApp].getClassLoader, dir.path)))
   }
 
   def assets(url: String, dir: FSDirectory): Unit = {
     Env.logger.debug(s"Add assets on $url -> ${dir.path}")
     routingHandler.setFallbackHandler(path().addPrefixPath(url, resource(new FileResourceManager(dir.path, 0))))
-    // routingHandler.add("GET", url, resource(new FileResourceManager(dir.path, 0)))
   }
 
   def websocketRoute(url: String, action: => WebSocketAction) {

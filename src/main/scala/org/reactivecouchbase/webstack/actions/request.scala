@@ -59,9 +59,9 @@ case class RequestCookies(private val request: HttpServerExchange) {
 
 case class RequestBody(bytes: ByteString) {
   lazy val string = bytes.utf8String
-  lazy val json: JsValue = Json.parse(string)
+  lazy val json: JsValue = safeJson.get
   lazy val safeJson: Try[JsValue] = Try(Json.parse(string))
-  lazy val xml: Elem = XML.loadString(string)
+  lazy val xml: Elem = safeXml.get
   lazy val safeXml: Try[Elem] = Try(XML.loadString(string))
   lazy val safeUrlFrom: Try[Map[String, List[String]]] = Try {
     var form = Map.empty[String, List[String]]

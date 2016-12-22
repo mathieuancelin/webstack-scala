@@ -11,6 +11,7 @@ import akka.http.scaladsl.model.ws.{Message, WebSocketRequest, WebSocketUpgradeR
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Sink, Source, StreamConverters}
 import akka.util.ByteString
+import org.reactivecouchbase.webstack.StreamUtils
 import org.reactivecouchbase.webstack.env.Env
 import org.reactivestreams.{Processor, Publisher}
 import play.api.libs.json.{JsValue, Json}
@@ -35,35 +36,31 @@ object WS {
   def websocketHost(host: String): WebSocketClientRequest = WebSocketClientRequest(host, "")
 }
 
-case class WSBody(underlying: ByteString) {
-  private val underlyingAsString = underlying.utf8String
-  def bytes: ByteString = underlying
-  def string: String = underlyingAsString
-  def json: JsValue = Json.parse(string)
-  def safeJson: Try[JsValue] = Try(json)
-  def safeXml: Try[Elem] = Try(xml)
-  def xml: Elem = XML.loadString(string)
+case class WSBody(bytes: ByteString) {
+  lazy val string = bytes.utf8String
+  lazy val json: JsValue = safeJson.get
+  lazy val safeJson: Try[JsValue] = Try(Json.parse(string))
+  lazy val safeXml: Try[Elem] = Try(XML.loadString(string))
+  lazy val xml: Elem = safeXml.get
 }
 
 case class WSResponse(underlying: HttpResponse) {
-  private var _headers = Map.empty[String, Seq[String]]
 
-  import scala.collection.JavaConversions._
-  for (header <- underlying.getHeaders) {
-    if (!_headers.containsKey(header.name)) {
-      _headers = _headers + (header.name -> Seq.empty[String])
+  lazy val headers: Map[String, Seq[String]] = {
+    var _headers = Map.empty[String, Seq[String]]
+    import scala.collection.JavaConversions._
+    for (header <- underlying.getHeaders) {
+      if (!_headers.containsKey(header.name)) {
+        _headers = _headers + (header.name -> Seq.empty[String])
+      }
+      _headers = _headers + (header.name -> (_headers.get(header.name).get :+ header.value))
     }
-    _headers = _headers + (header.name -> (_headers.get(header.name).get :+ header.value))
+    _headers + ("Content-Type" -> Seq(underlying.entity.getContentType.mediaType.toString))
   }
-  
-  val headers = _headers + ("Content-Type" -> Seq(underlying.entity.getContentType.mediaType.toString))
 
   def status: Int = underlying.status.intValue
-
   def statusText: String = underlying.status.defaultMessage
-
   def header(name: String): Option[String] = headers.get(name).flatMap(_.headOption)
-
   def body(implicit ec: ExecutionContext, materializer: Materializer): Future[WSBody] = {
     bodyAsStream.runFold(ByteString.empty)(_.concat(_)).map(WSBody.apply)
   }
@@ -71,11 +68,9 @@ case class WSResponse(underlying: HttpResponse) {
   def rawBodyAsStream: Source[ByteString, _] = underlying.entity.dataBytes
 
   def bodyAsStream: Source[ByteString, _] = {
-    val source: Source[ByteString, Any] = rawBodyAsStream
-    if (header("Content-Encoding").getOrElse("none").equalsIgnoreCase("gzip")) {
-      source.via(Gzip.decoderFlow)
-    } else {
-      source
+    header("Content-Encoding") match {
+      case Some("gzip") => rawBodyAsStream.via(Gzip.decoderFlow)
+      case _ => rawBodyAsStream
     }
   }
 
@@ -89,15 +84,16 @@ case class WSResponse(underlying: HttpResponse) {
 }
 
 case class WSRequest(
-    connectionFlow: Flow[HttpRequest, HttpResponse, Future[OutgoingConnection]],
-    host: String,
-    port: Int,
-    path: String = "",
-    method: HttpMethod = HttpMethods.GET,
-    body: Source[ByteString, _] = Source.empty[ByteString],
-    contentType: ContentType = ContentTypes.`text/plain(UTF-8)`,
-    headers: Map[String, Seq[String]] = Map.empty[String, Seq[String]],
-    queryParams: Map[String, Seq[String]] = Map.empty[String, Seq[String]]) {
+  connectionFlow: Flow[HttpRequest, HttpResponse, Future[OutgoingConnection]],
+  host: String,
+  port: Int,
+  path: String = "",
+  method: HttpMethod = HttpMethods.GET,
+  body: Source[ByteString, _] = Source.empty[ByteString],
+  contentType: ContentType = ContentTypes.`text/plain(UTF-8)`,
+  headers: Map[String, Seq[String]] = Map.empty[String, Seq[String]],
+  queryParams: Map[String, Seq[String]] = Map.empty[String, Seq[String]]
+) {
 
   def withPath(path: String): WSRequest = copy(path = path)
   def addPathSegment(segment: String): WSRequest = copy(path = path + "/" + segment)
@@ -115,52 +111,44 @@ case class WSRequest(
   }
 
   def withBody(body: String): WSRequest = {
-    val source: Source[ByteString, _] = Source.single(ByteString.fromString(body))
-    copy(body = source, contentType = ContentTypes.`text/plain(UTF-8)`)
+    copy(body = StreamUtils.stringToSource(body), contentType = ContentTypes.`text/plain(UTF-8)`)
   }
 
   def withBody(body: String, ctype: ContentType): WSRequest = {
-    val source: Source[ByteString, _] = Source.single(ByteString.fromString(body))
-    copy(body = source, contentType = ctype)
+    copy(body = StreamUtils.stringToSource(body), contentType = ctype)
   }
 
   def withBody(body: ByteString): WSRequest = {
-    val source: Source[ByteString, _] = Source.single(body)
-    copy(body = source, contentType = ContentTypes.`application/octet-stream`)
+    copy(body = Source.single(body), contentType = ContentTypes.`application/octet-stream`)
   }
 
   def withBody(body: ByteString, ctype: ContentType): WSRequest = {
-    val source: Source[ByteString, _] = Source.single(body)
-    copy(body = source, contentType = ctype)
+    copy(body = Source.single(body), contentType = ctype)
   }
 
   def withBody(body: Array[Byte]): WSRequest = {
-    val source: Source[ByteString, _] = Source.single(ByteString.fromArray(body))
-    copy(body = source, contentType = ContentTypes.`text/plain(UTF-8)`)
+    copy(body = StreamUtils.bytesToSource(body), contentType = ContentTypes.`text/plain(UTF-8)`)
   }
 
   def withBody(body: Array[Byte], ctype: ContentType): WSRequest = {
-    val source: Source[ByteString, _] = Source.single(ByteString.fromArray(body))
-    copy(body = source, contentType = ctype)
+    copy(body = StreamUtils.bytesToSource(body), contentType = ctype)
   }
 
   def withBody(body: InputStream): WSRequest = {
-    val source: Source[ByteString, _] = StreamConverters.fromInputStream(() => body)
-    copy(body = source, contentType = ContentTypes.`application/octet-stream`)
+    copy(body = StreamConverters.fromInputStream(() => body), contentType = ContentTypes.`application/octet-stream`)
   }
 
   def withBody(body: InputStream, ctype: ContentType): WSRequest = {
-    val source: Source[ByteString, _] = StreamConverters.fromInputStream(() => body)
-    copy(body = source, contentType = ctype)
+    copy(body = StreamConverters.fromInputStream(() => body), contentType = ctype)
   }
 
   def withBody(body: Elem): WSRequest = {
-    val source: Source[ByteString, _] =  Source.single(ByteString.fromString(new scala.xml.PrettyPrinter(80, 2).format(body)))
+    val source = StreamUtils.stringToSource(new scala.xml.PrettyPrinter(80, 2).format(body))
     copy(body = source, contentType = ContentType.parse("application/xml").right.get)
   }
 
   def withBody(body: Elem, ctype: ContentType): WSRequest = {
-    val source: Source[ByteString, _] =  Source.single(ByteString.fromString(new scala.xml.PrettyPrinter(80, 2).format(body)))
+    val source = StreamUtils.stringToSource(new scala.xml.PrettyPrinter(80, 2).format(body))
     copy(body = source, contentType = ctype)
   }
 
@@ -204,10 +192,12 @@ case class WSRequest(
 
 case class WebSocketConnections[T](response: Future[WebSocketUpgradeResponse], materialized: T)
 
-case class WebSocketClientRequest(host: String,
-                                  path: String,
-                                  headers: Map[String, Seq[String]] = Map.empty[String, Seq[String]],
-                                  queryParams: Map[String, Seq[String]] = Map.empty[String, Seq[String]]) {
+case class WebSocketClientRequest(
+  host: String,
+  path: String,
+  headers: Map[String, Seq[String]] = Map.empty[String, Seq[String]],
+  queryParams: Map[String, Seq[String]] = Map.empty[String, Seq[String]]
+) {
 
   def withPath(path: String): WebSocketClientRequest = copy(path = path)
 

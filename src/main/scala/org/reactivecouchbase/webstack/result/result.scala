@@ -8,6 +8,7 @@ import java.util.concurrent.{ConcurrentHashMap, ConcurrentMap}
 import akka.stream.scaladsl.{FileIO, Source, StreamConverters}
 import akka.util.ByteString
 import com.github.jknack.handlebars.{Context, Handlebars, Template}
+import org.reactivecouchbase.webstack.StreamUtils
 import org.reactivecouchbase.webstack.actions.RequestContext
 import org.reactivecouchbase.webstack.mvc.{Cookie, Session}
 import org.reactivestreams.Publisher
@@ -92,6 +93,7 @@ object Results extends Results {
 }
 
 object Result {
+  // TODO : move in Env
   private val handlebars: Handlebars = TemplatesBoilerplate("/templates", ".html").handlebars
   private val TEMPLATES_CACHE: ConcurrentMap[String, Template] = new ConcurrentHashMap[String, Template]
   private def getTemplate(name: String): Template = {
@@ -113,7 +115,7 @@ case class Result(
   cookies: Seq[Cookie] = Seq.empty[Cookie]
 ) {
 
-  val materializedValue: Promise[Any] = Promise[Any]
+  private[webstack] val materializedValue: Promise[Any] = Promise[Any]
 
   def as(contentType: String): Result = copy(contentType = contentType)
 
@@ -158,10 +160,7 @@ case class Result(
 
   def removeSession(): Result = removeCookie(Session().asCookie.copy(discard = true, maxAge = 0))
 
-  def text(text: String): Result = {
-    val source = Source[ByteString](IMterable.concat(text.getBytes(StandardCharsets.UTF_8).grouped(8192).map(ByteString.apply).toSeq))
-    copy(source = source, contentType = MediaType.TEXT_PLAIN_VALUE)
-  }
+  def text(text: String): Result = copy(source = StreamUtils.stringToSource(text), contentType = MediaType.TEXT_PLAIN_VALUE)
 
   def json(json: String): Result = text(json).as(MediaType.APPLICATION_JSON_VALUE)
 
@@ -185,8 +184,7 @@ case class Result(
   }
 
   def binary(bytes: Array[Byte]): Result = {
-    val source = Source[ByteString](IMterable.concat(bytes.grouped(8192).map(ByteString.apply).toSeq))
-    copy(source = source, contentType = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+    copy(source = StreamUtils.bytesToSource(bytes), contentType = MediaType.APPLICATION_OCTET_STREAM_VALUE)
   }
 
   def binary(bytes: Publisher[ByteString]): Result = binary(Source.fromPublisher(bytes))
