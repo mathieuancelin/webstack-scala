@@ -11,7 +11,6 @@ class Routes1 extends WebStackApp {
 
   lazy val _env = EnvLike(Configuration("""app.value = "service1""""), "service1")
   lazy val controller = new ServiceController()(_env)
-
   override def env = _env
 
   Get -> "/service" -> controller.service
@@ -19,9 +18,9 @@ class Routes1 extends WebStackApp {
 }
 
 class Routes2 extends WebStackApp {
+
   lazy val _env = EnvLike(Configuration("""app.value = "service2""""), "service2")
   lazy val controller = new ServiceController()(_env)
-
   override def env = _env
 
   Get -> "/service" -> controller.service
