@@ -20,14 +20,13 @@ class ReactiveActionHandler(env: EnvLike, action: => Action) extends HttpHandler
     exchange.setMaxEntitySize(Long.MaxValue)
     exchange.dispatch(new Runnable {
       override def run(): Unit = {
-        // TODO : find a better way to pass the execution context and materializer
         implicit val ec = env.blockingExecutionContext
         if (exchange.isInIoThread) env.logger.warn("Request processed in IO thread !!!!")
         action.run(exchange).andThen {
           case Failure(e) => {
             exchange.setStatusCode(500)
             exchange.getResponseHeaders.put(Headers.CONTENT_TYPE, "application/json")
-            exchange.getResponseSender.send(Json.stringify(Json.obj("error" -> e.getMessage))) // TODO : throwable writer
+            exchange.getResponseSender.send(Json.stringify(env.throwableWriter.writes(e)))
             exchange.endExchange()
           }
           case Success(result) => {

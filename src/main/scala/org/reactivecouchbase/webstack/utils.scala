@@ -8,13 +8,20 @@ import akka.util.ByteString
 import scala.collection.immutable.{Iterable => IMterable}
 
 object StreamUtils {
-  def bytesToSource(value: Array[Byte], chunk: Int = 8192): Source[ByteString, _] = {
-    // PERFS ?
-    Source[ByteString](IMterable.concat(value.grouped(chunk).map(ByteString.apply).toSeq))
+
+  val defaultChunkSize = 8192
+
+  def bytesToSource(value: Array[Byte], groupBy: Option[Int] = None): Source[ByteString, _] = {
+    groupBy match {
+      case Some(chunk) => Source[ByteString](IMterable.concat(value.grouped(chunk).map(ByteString.apply).toSeq)) // PERFS ?
+      case None => Source.single(ByteString.fromArray(value))
+    }
   }
 
-  def stringToSource(value: String, chunk: Int = 8192): Source[ByteString, _] = {
-    // PERFS ?
-    bytesToSource(value.getBytes(StandardCharsets.UTF_8), chunk)
+  def stringToSource(value: String, groupBy: Option[Int] = None): Source[ByteString, _] = {
+    groupBy match {
+      case Some(chunk) => bytesToSource(value.getBytes(StandardCharsets.UTF_8), Some(chunk)) // PERFS ?
+      case None => Source.single(ByteString.fromString(value))
+    }
   }
 }

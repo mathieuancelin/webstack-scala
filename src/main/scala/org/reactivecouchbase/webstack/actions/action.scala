@@ -1,9 +1,8 @@
 package org.reactivecouchbase.webstack.actions
 
 import io.undertow.server.HttpServerExchange
-import org.reactivecouchbase.webstack.env.{ EnvLike, Env }
+import org.reactivecouchbase.webstack.env.{Env, EnvLike}
 import org.reactivecouchbase.webstack.result.{Result, Results}
-import play.api.libs.json.Json
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
@@ -21,7 +20,7 @@ object Action {
   }
 
   private[actions] def transformError(t: Throwable, request: RequestContext): Result = {
-    Results.InternalServerError.json(Json.obj("error" -> t.getMessage)) // TODO : throwable writer
+    Results.InternalServerError.json(request.env.throwableWriter.writes(t))
   }
 
   def sync(block: RequestContext => Result)(implicit env: EnvLike = Env): Action = {
@@ -67,7 +66,6 @@ trait ActionStep {
   }
 
   def sync(block: Function[RequestContext, Result])(implicit env: EnvLike = Env): Action = {
-    // TODO : find a better way to pass the execution context
     implicit val ec = env.blockingExecutionContext
     async { req => Future {
       Try(block.apply(req)) match {

@@ -125,19 +125,19 @@ case class RequestContext(private val state: Map[String, AnyRef], exchange: Http
     bodyParser.apply(headers, bodyAsPublisher())
   }
 
-  def bodyAsStream: Source[ByteString, Any] = {
-    header("Content-Encoding") match {
-      case Some("gzip") => rawBodyAsStream.via(Gzip.decoderFlow)
-      case _ => rawBodyAsStream
-    }
-  }
-
-  def rawBodyAsStream: Source[ByteString, Any] = {
+  lazy val rawBodyAsStream: Source[ByteString, Any] = {
     // TODO : avoid blocking here
     StreamConverters.fromInputStream(() => {
       exchange.startBlocking()
       exchange.getInputStream
     })
+  }
+
+  def bodyAsStream: Source[ByteString, Any] = {
+    header("Content-Encoding") match {
+      case Some("gzip") => rawBodyAsStream.via(Gzip.decoderFlow)
+      case _ => rawBodyAsStream
+    }
   }
 
   def bodyAsPublisher(fanout: Boolean = false)(implicit materializer: Materializer): Publisher[ByteString] = {

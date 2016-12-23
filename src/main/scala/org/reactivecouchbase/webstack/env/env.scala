@@ -8,6 +8,7 @@ import org.reactivecouchbase.webstack.config.Configuration
 import org.reactivecouchbase.webstack.mvc.SessionConfig
 import org.reactivecouchbase.webstack.result.{TemplateConfig, TemplatesResolver}
 import org.slf4j.{Logger, LoggerFactory}
+import play.api.libs.json.{JsObject, JsString, Json, Writes}
 
 import scala.concurrent.ExecutionContext
 
@@ -97,6 +98,20 @@ trait EnvLike {
   def websocketExecutionContext: ExecutionContext = websocketActorSystem.dispatcher
   def websocketMaterializer: Materializer = _websocketMaterializer
   def websocketHttp: HttpExt = _websocketHttp
+
+  def throwableWriter: Writes[Throwable] = Writes { t =>
+    val obj = Json.obj(
+      "message" -> t.getMessage,
+      "stack" -> Json.arr(t.getStackTrace.map { ste =>
+        JsString(ste.toString)
+      })
+    )
+    Option(t.getCause) match {
+      case Some(cause) => obj ++ throwableWriter.writes(cause).as[JsObject]
+      case None => obj
+    }
+
+  }
 }
 
 object Env extends EnvLike {
@@ -122,5 +137,9 @@ object Env extends EnvLike {
     _blockingActorSystem.terminate()
     _webserviceActorSystem.terminate()
     _websocketActorSystem.terminate()
+  }
+
+  object Implicits {
+    implicit val env: EnvLike = Env
   }
 }

@@ -106,7 +106,7 @@ case class WSRequest(
   def withBody(body: Source[ByteString, _], ctype: ContentType): WSRequest = copy(body = body, contentType = ctype)
 
   def withBody(body: JsValue): WSRequest = {
-    val source: Source[ByteString, _] = Source.single(ByteString.fromString(Json.stringify(body)))
+    val source: Source[ByteString, _] = StreamUtils.stringToSource(Json.stringify(body))
     copy(body = source, contentType = ContentTypes.`application/json`)
   }
 

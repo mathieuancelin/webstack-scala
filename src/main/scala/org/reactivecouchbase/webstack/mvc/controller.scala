@@ -10,5 +10,5 @@ trait Todo {
 }
 
 trait Controller extends Todo with Results {
-
+ // TODO : add writable
 }

@@ -89,9 +89,9 @@ trait Results {
   }
 }
 
-object Results extends Results {
 
-}
+
+object Results extends Results {}
 
 case class Result(
   status: Int,
@@ -100,6 +100,8 @@ case class Result(
   headers: Map[String, Seq[String]] = Map.empty[String, Seq[String]],
   cookies: Seq[Cookie] = Seq.empty[Cookie]
 ) {
+
+  // TODO : apply()(implicit writable)
 
   private[webstack] val materializedValue: Promise[Any] = Promise[Any]
 
@@ -196,8 +198,10 @@ case class Result(
 
   def chunked(source: Source[ByteString, Any]): Result = copy(source = source)
 
+  // TODO : writable
   def stream(source: Publisher[String]): Result = stream(Source.fromPublisher(source))
 
+  // TODO : writable
   def stream(stream: Source[String, _]): Result = copy(source = stream.map(ByteString.fromString))
 
   def matValue[T](implicit ct: ClassTag[T], ec: ExecutionContext): Future[T] = materializedValue.future.map(e => ct.unapply(e).get)

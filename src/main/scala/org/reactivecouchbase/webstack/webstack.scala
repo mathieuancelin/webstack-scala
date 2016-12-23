@@ -10,7 +10,7 @@ import io.undertow.server.{HttpHandler, HttpServerExchange}
 import io.undertow.util.HttpString
 import io.undertow.{Handlers, Undertow}
 import org.reactivecouchbase.webstack.actions.{Action, ReactiveActionHandler}
-import org.reactivecouchbase.webstack.env.{EnvLike, Env}
+import org.reactivecouchbase.webstack.env.{Env, EnvLike}
 import org.reactivecouchbase.webstack.websocket.{ReactiveWebSocketHandler, WebSocketAction}
 import org.reflections.Reflections
 import play.api.libs.json.Json
@@ -73,16 +73,14 @@ case class AssetsRoute(app: WebStackApp) {
 }
 
 case class AssetsRouteWithPath(app: WebStackApp, path: String) {
-  def ->(cpDir: ClassPathDirectory)     = app.assets(path, cpDir)
-  def →(cpDir: ClassPathDirectory)      = app.assets(path, cpDir)
-  def serves(cpDir: ClassPathDirectory) = app.assets(path, cpDir)
-  def ->(fsDir: FSDirectory)            = app.assets(path, fsDir)
-  def →(fsDir: FSDirectory)             = app.assets(path, fsDir)
-  def serves(fsDir: FSDirectory)        = app.assets(path, fsDir)
+  def ->(dir: ResourcesDiractory)(implicit env: EnvLike = Env)     = app.assets(path, dir)
+  def →(dir: ResourcesDiractory)(implicit env: EnvLike = Env)      = app.assets(path, dir)
+  def serves(dir: ResourcesDiractory)(implicit env: EnvLike = Env) = app.assets(path, dir)
 }
 
-case class ClassPathDirectory(path: String)
-case class FSDirectory(path: File)
+sealed trait ResourcesDiractory
+case class ClassPathDirectory(path: String) extends ResourcesDiractory
+case class FSDirectory(path: File) extends ResourcesDiractory
 
 class WebStackApp {
 
@@ -93,14 +91,15 @@ class WebStackApp {
     routingHandler.add(method.name, url, ReactiveActionHandler(env, action))
   }
 
-  def assets(url: String, dir: ClassPathDirectory): Unit = {
-    // env.logger.debug(s"Add assets on $url -> ${dir.path}")
-    routingHandler.setFallbackHandler(path().addPrefixPath(url, resource(new ClassPathResourceManager(classOf[WebStackApp].getClassLoader, dir.path))))
-  }
-
-  def assets(url: String, dir: FSDirectory): Unit = {
-    // env.logger.debug(s"Add assets on $url -> ${dir.path}")
-    routingHandler.setFallbackHandler(path().addPrefixPath(url, resource(new FileResourceManager(dir.path, 0))))
+  def assets(url: String, dir: ResourcesDiractory)(implicit env: EnvLike = Env): Unit = {
+    dir match {
+      case ClassPathDirectory(p) =>
+        env.logger.debug(s"Add assets on $url -> $p")
+        routingHandler.setFallbackHandler(path().addPrefixPath(url, resource(new ClassPathResourceManager(classOf[WebStackApp].getClassLoader, p))))
+      case FSDirectory(p) =>
+        env.logger.debug(s"Add assets on $url -> ${p.getAbsolutePath}")
+        routingHandler.setFallbackHandler(path().addPrefixPath(url, resource(new FileResourceManager(p, 0))))
+    }
   }
 
   def websocketRoute(url: String, action: => WebSocketAction)(implicit env: EnvLike = Env) {
