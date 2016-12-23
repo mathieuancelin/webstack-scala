@@ -25,7 +25,7 @@ class BasicTestSpec extends FlatSpec with Matchers with BeforeAndAfterAll {
   val port = 7002
 
   override protected def beforeAll(): Unit = {
-    server = new Routes().start(Some(port))
+    server = Routes.start(port = Some(port))
   }
 
   override protected def afterAll(): Unit = {
