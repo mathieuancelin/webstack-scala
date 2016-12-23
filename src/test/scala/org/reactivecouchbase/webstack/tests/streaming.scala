@@ -4,7 +4,8 @@ import akka.stream.scaladsl.Framing
 import akka.util.ByteString
 import org.reactivecouchbase.webstack.WebStackApp
 import org.reactivecouchbase.webstack.actions.Action
-import org.reactivecouchbase.webstack.env.{Env => Env}
+import org.reactivecouchbase.webstack.env.Env
+import org.reactivecouchbase.webstack.mvc.Controller
 import org.reactivecouchbase.webstack.result.Results._
 import play.api.libs.json._
 
@@ -24,7 +25,7 @@ object StreamingRoutes extends WebStackApp with App {
   start(port = Some(8888))
 }
 
-object StreamingController {
+object StreamingController extends Controller {
 
   implicit val ec  = Env.defaultExecutionContext
   implicit val mat = Env.defaultMaterializer

@@ -10,6 +10,7 @@ import org.reactivecouchbase.webstack.result.{TemplateConfig, TemplatesResolver}
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.libs.json.{JsObject, JsString, Json, Writes}
 
+import scala.annotation.implicitNotFound
 import scala.concurrent.ExecutionContext
 
 sealed trait Mode
@@ -63,6 +64,7 @@ object EnvLike {
   }
 }
 
+@implicitNotFound("Cannot find an instance of EnvLike. Try to import a org.reactivecouchbase.webstack.env.Env")
 trait EnvLike {
 
   // provided

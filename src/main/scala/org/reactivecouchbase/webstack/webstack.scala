@@ -132,6 +132,7 @@ class WebStackApp {
 
 object WebStack extends App {
 
+  // TODO : find objects extending WebStackApp
   Env.logger.trace("Scanning classpath looking for WebStackApp implementations")
   new Reflections("").getSubTypesOf(classOf[WebStackApp]).headOption.map { serverClazz =>
     Try {

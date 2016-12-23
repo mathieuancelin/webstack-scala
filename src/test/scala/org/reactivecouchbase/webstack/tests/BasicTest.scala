@@ -10,7 +10,8 @@ import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.stream.actor.{ActorPublisher, ActorPublisherMessage}
 import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
 import org.reactivecouchbase.webstack.actions.{Action, ActionStep}
-import org.reactivecouchbase.webstack.env.{ Env => Env }
+import org.reactivecouchbase.webstack.env.Env
+import org.reactivecouchbase.webstack.mvc.Controller
 import org.reactivecouchbase.webstack.result.Results
 import org.reactivecouchbase.webstack.result.Results._
 import org.reactivecouchbase.webstack.websocket.{ActorFlow, WebSocketAction, WebSocketContext}
@@ -44,7 +45,7 @@ object BasicTestSpecRoutes extends WebStackApp {
 
 }
 
-object MyController {
+object MyController extends Controller {
 
   implicit val ec  = Env.defaultExecutionContext
   implicit val mat = Env.defaultMaterializer

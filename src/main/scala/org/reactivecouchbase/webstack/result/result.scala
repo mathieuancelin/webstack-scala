@@ -1,20 +1,19 @@
 package org.reactivecouchbase.webstack.result
 
 import java.io.{File, InputStream}
-import java.nio.charset.StandardCharsets
 import java.nio.file.Path
-import java.util.concurrent.{ConcurrentHashMap, ConcurrentMap}
 
 import akka.stream.scaladsl.{FileIO, Source, StreamConverters}
 import akka.util.ByteString
-import com.github.jknack.handlebars.{Context, Handlebars, Template}
+import com.github.jknack.handlebars.Context
 import org.reactivecouchbase.webstack.StreamUtils
 import org.reactivecouchbase.webstack.actions.RequestContext
-import org.reactivecouchbase.webstack.env.{EnvLike, Env}
+import org.reactivecouchbase.webstack.env.{Env, EnvLike}
 import org.reactivecouchbase.webstack.mvc.{Cookie, Session}
 import org.reactivestreams.Publisher
 import play.api.libs.json.{JsValue, Json}
 
+import scala.annotation.implicitNotFound
 import scala.collection.immutable.{Iterable => IMterable}
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.reflect.ClassTag
@@ -89,7 +88,13 @@ trait Results {
   }
 }
 
+@implicitNotFound("Cannot write an instance of ${A} to HTTP response. Try to define a Writeable[${A}]")
+class Writeable[-A](val transform: A => ByteString, val contentType: String)
 
+object Writeable {
+  def apply[A](transform: A => ByteString, contentType: String = MediaType.TEXT_PLAIN_VALUE): Writeable[A] =
+    new Writeable[A](transform, contentType)
+}
 
 object Results extends Results {}
 
@@ -101,7 +106,9 @@ case class Result(
   cookies: Seq[Cookie] = Seq.empty[Cookie]
 ) {
 
-  // TODO : apply()(implicit writable)
+  def apply[C](content: C)(implicit writeable: Writeable[C]): Result = {
+    copy(source = Source.single(writeable.transform(content)), contentType = writeable.contentType)
+  }
 
   private[webstack] val materializedValue: Promise[Any] = Promise[Any]
 
@@ -198,11 +205,21 @@ case class Result(
 
   def chunked(source: Source[ByteString, Any]): Result = copy(source = source)
 
-  // TODO : writable
-  def stream(source: Publisher[String]): Result = stream(Source.fromPublisher(source))
+  def stream[A](source: Publisher[A])(implicit writeable: Writeable[A]): Result = {
+    stream(Source.fromPublisher(source))(writeable)
+  }
 
-  // TODO : writable
-  def stream(stream: Source[String, _]): Result = copy(source = stream.map(ByteString.fromString))
+  def streamText(source: Publisher[String]): Result = {
+    stream(Source.fromPublisher(source))(Writeable(ByteString.fromString))
+  }
+
+  def stream[A](source: Source[A, _])(implicit writeable: Writeable[A]): Result = {
+    copy(source = source.map(writeable.transform), contentType = writeable.contentType)
+  }
+
+  def streamText(source: Source[String, _]): Result = {
+    copy(source = source.map(ByteString.fromString))
+  }
 
   def matValue[T](implicit ct: ClassTag[T], ec: ExecutionContext): Future[T] = materializedValue.future.map(e => ct.unapply(e).get)
 

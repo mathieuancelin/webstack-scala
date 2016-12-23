@@ -22,7 +22,6 @@ class TemplatesResolver(prefix: String, suffix: String) {
 
   private val TEMPLATES_CACHE = new ConcurrentHashMap[String, Template]
 
-  // TODO : option ?
   def getTemplate(name: String): Template = {
     if (!TEMPLATES_CACHE.containsKey(name)) {
       Try {
