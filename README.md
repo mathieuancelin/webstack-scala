@@ -21,7 +21,8 @@ the routes of your application are located in `app/Routes.scala` and looks like
 import controllers._
 import org.reactivecouchbase.webstack.{ClassPathDirectory, WebStackApp}
 
-class Routes extends WebStackApp {
+// you can you a class too
+object Routes extends WebStackApp {
 
   Get    →       "/"           →         HomeController.index
   Get    →       "/users"      →         HomeController.users
@@ -198,7 +199,7 @@ import akka.actor._
 import akka.http.scaladsl.model.ws._
 import org.reactivecouchbase.webstack.{ClassPathDirectory, WebStackApp}
 
-class Routes extends WebStackApp {
+object Routes extends WebStackApp {
   Ws →  "/echo"  →   MyController.echo
 }
 

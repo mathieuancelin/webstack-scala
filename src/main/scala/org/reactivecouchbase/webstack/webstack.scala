@@ -132,14 +132,22 @@ class WebStackApp {
 
 object WebStack extends App {
 
-  // TODO : find objects extending WebStackApp
-  Env.logger.trace("Scanning classpath looking for WebStackApp implementations")
+  Env.logger.trace("Scanning classpath looking for WebStackApp class or object")
   new Reflections("").getSubTypesOf(classOf[WebStackApp]).headOption.map { serverClazz =>
     Try {
-      Env.logger.info(s"Found WebStackApp class: ${serverClazz.getName}")
-      val context = serverClazz.newInstance()
-      startWebStackApp(context)
-    } get
+      val clazz = Class.forName(serverClazz.getName)
+      classOf[WebStackApp].cast(clazz.getField("MODULE$").get(clazz))
+    } toOption match {
+      case Some(singleton) => Try {
+        Env.logger.info(s"Found WebStackApp object: ${serverClazz.getName}")
+        startWebStackApp(singleton)
+      } get
+      case None => Try {
+        Env.logger.info(s"Found WebStackApp class: ${serverClazz.getName}")
+        val context = serverClazz.newInstance()
+        startWebStackApp(context)
+      } get
+    }
   }.getOrElse(Env.logger.error("No implementation of WebStackApp found :("))
 
   private[webstack] def startWebStackApp(
