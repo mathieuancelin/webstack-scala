@@ -138,7 +138,7 @@ object WebStack extends App {
       classOf[WebStackApp].cast(serverClazz.getField("MODULE$").get(serverClazz))
     } toOption match {
       case Some(singleton) => {
-        Env.logger.info(s"Found WebStackApp object: ${serverClazz.getName}")
+        Env.logger.info(s"Found WebStackApp object: ${serverClazz.getName.init}")
         startWebStackApp(singleton)
       }
       case None => {
