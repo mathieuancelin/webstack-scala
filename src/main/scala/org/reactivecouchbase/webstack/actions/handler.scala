@@ -37,7 +37,6 @@ class ReactiveActionHandler(env: EnvLike, action: => Action) extends HttpHandler
             exchange.getResponseHeaders.put(Headers.CONTENT_TYPE, result.contentType)
             exchange.getResponseHeaders.put(HttpString.tryFromString("Transfer-Encoding"), "chunked")
             exchange.getResponseHeaders.put(HttpString.tryFromString("X-Transfer-Encoding"), "chunked")
-            // exchange.getResponseHeaders.put(HttpString.tryFromString("X-Content-Type"), result.contentType)
             val responseChannel = exchange.getResponseChannel
             val (first, second) =
               result.source

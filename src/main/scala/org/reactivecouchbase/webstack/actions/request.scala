@@ -126,7 +126,7 @@ case class RequestContext(private val state: Map[String, AnyRef], exchange: Http
   }
 
   lazy val rawBodyAsStream: Source[ByteString, Any] = {
-    // TODO : avoid blocking here
+    // TODO : avoid using blocking input stream here here
     StreamConverters.fromInputStream(() => {
       exchange.startBlocking()
       exchange.getInputStream

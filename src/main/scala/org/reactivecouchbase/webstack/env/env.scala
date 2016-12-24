@@ -1,8 +1,8 @@
 package org.reactivecouchbase.webstack.env
 
 import akka.actor.ActorSystem
-import akka.http.scaladsl.{Http, HttpExt}
-import akka.stream.{ActorMaterializer, Materializer}
+import akka.http.scaladsl.Http
+import akka.stream.ActorMaterializer
 import com.typesafe.config.ConfigFactory
 import org.reactivecouchbase.webstack.config.Configuration
 import org.reactivecouchbase.webstack.mvc.SessionConfig
@@ -64,7 +64,7 @@ object EnvLike {
   }
 }
 
-@implicitNotFound("Cannot find an instance of EnvLike. Try to import a org.reactivecouchbase.webstack.env.Env")
+@implicitNotFound("Cannot find an instance of EnvLike. Try to create one or use 'import org.reactivecouchbase.webstack.env.Env.Implicits._'")
 trait EnvLike {
 
   // provided
@@ -78,28 +78,20 @@ trait EnvLike {
   def stop(): Unit
 
   // default implementation
-  private lazy val _defaultMaterializer = ActorMaterializer.create(defaultActorSystem)
-  private lazy val _blockingMaterializer = ActorMaterializer.create(blockingActorSystem)
-  private lazy val _webserviceMaterializer = ActorMaterializer.create(webserviceActorSystem)
-  private lazy val _websocketMaterializer = ActorMaterializer.create(websocketActorSystem)
-  private lazy val _webserviceHttp = Http.get(webserviceActorSystem)
-  private lazy val _websocketHttp = Http.get(websocketActorSystem)
+  lazy val defaultMaterializer = ActorMaterializer.create(defaultActorSystem)
+  lazy val blockingMaterializer = ActorMaterializer.create(blockingActorSystem)
+  lazy val webserviceMaterializer = ActorMaterializer.create(webserviceActorSystem)
+  lazy val websocketMaterializer = ActorMaterializer.create(websocketActorSystem)
+  lazy val wsHttp = Http.get(webserviceActorSystem)
+  lazy val websocketHttp = Http.get(websocketActorSystem)
+  lazy val mode = Mode.valueOf(configuration.getString("app.mode").getOrElse("Prod")).getOrElse(Mode.prod)
+
   private[webstack] lazy val sessionConfig = new SessionConfig(configuration)
-  lazy val mode: Mode = Mode.valueOf(configuration.getString("app.mode").getOrElse("Prod")).getOrElse(Mode.prod)
 
   def defaultExecutionContext: ExecutionContext = defaultActorSystem.dispatcher
-  def defaultMaterializer: Materializer = _defaultMaterializer
-
   def blockingExecutionContext: ExecutionContext = blockingActorSystem.dispatcher
-  def blockingMaterializer: Materializer = _blockingMaterializer
-
   def wsExecutionContext: ExecutionContext = webserviceActorSystem.dispatcher
-  def wsMaterializer: Materializer = _webserviceMaterializer
-  def wsHttp: HttpExt = _webserviceHttp
-
   def websocketExecutionContext: ExecutionContext = websocketActorSystem.dispatcher
-  def websocketMaterializer: Materializer = _websocketMaterializer
-  def websocketHttp: HttpExt = _websocketHttp
 
   def throwableWriter: Writes[Throwable] = Writes { t =>
     val obj = Json.obj(
@@ -112,33 +104,25 @@ trait EnvLike {
       case Some(cause) => obj ++ throwableWriter.writes(cause).as[JsObject]
       case None => obj
     }
-
   }
 }
 
 object Env extends EnvLike {
 
-  private lazy val DEFAULT = Configuration(ConfigFactory.load)
-  private lazy val APP_LOGGER: Logger = LoggerFactory.getLogger("application")
-  private lazy val _defaultActorSystem = EnvLike.actorSystem("global", configuration)
-  private lazy val _blockingActorSystem = EnvLike.actorSystem("blocking", configuration)
-  private lazy val _webserviceActorSystem = EnvLike.actorSystem("ws", configuration)
-  private lazy val _websocketActorSystem = EnvLike.actorSystem("websocket", configuration)
-  private lazy val _templateResolver = new TemplatesResolver("/templates", ".html")
-
-  override def logger: Logger = APP_LOGGER
-  override def configuration: Configuration = DEFAULT
-  override def websocketActorSystem: ActorSystem = _websocketActorSystem
-  override def blockingActorSystem: ActorSystem = _blockingActorSystem
-  override def webserviceActorSystem: ActorSystem = _webserviceActorSystem
-  override def defaultActorSystem: ActorSystem = _defaultActorSystem
-  override def templateResolver: TemplatesResolver = _templateResolver
+  lazy val configuration = Configuration(ConfigFactory.load)
+  lazy val logger = LoggerFactory.getLogger("application")
+  lazy val defaultActorSystem = EnvLike.actorSystem("global", configuration)
+  lazy val blockingActorSystem = EnvLike.actorSystem("blocking", configuration)
+  lazy val webserviceActorSystem = EnvLike.actorSystem("ws", configuration)
+  lazy val websocketActorSystem = EnvLike.actorSystem("websocket", configuration)
+  lazy val templateResolver = new TemplatesResolver("/templates", ".html")
 
   override def stop(): Unit = {
-    _defaultActorSystem.terminate()
-    _blockingActorSystem.terminate()
-    _webserviceActorSystem.terminate()
-    _websocketActorSystem.terminate()
+    logger.info("Stopping env...")
+    defaultActorSystem.terminate()
+    blockingActorSystem.terminate()
+    webserviceActorSystem.terminate()
+    websocketActorSystem.terminate()
   }
 
   object Implicits {

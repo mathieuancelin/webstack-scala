@@ -14,7 +14,6 @@ import org.reactivestreams.Publisher
 import play.api.libs.json.{JsValue, Json}
 
 import scala.annotation.implicitNotFound
-import scala.collection.immutable.{Iterable => IMterable}
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.reflect.ClassTag
 import scala.util.Try

@@ -33,7 +33,7 @@ class ReactiveWebSocketHandler(env: EnvLike, supplier: => WebSocketAction) exten
           }).run()
           matQueue.watchCompletion().andThen {
             case _ => try {
-              exchange.endExchange();
+              exchange.endExchange()
             } catch {
               case e: Exception => env.logger.error("Error while closing websocket session", e)
             }
@@ -74,6 +74,7 @@ class ReactiveWebSocketHandler(env: EnvLike, supplier: => WebSocketAction) exten
       }
     }
     channel.getReceiveSetter.set(listener)
+    // TODO : find how to fix that
     // channel.getCloseSetter.set(new ChannelListener[_] {
     //   try {
     //     get(id).foreach(_.complete)
