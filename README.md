@@ -4,6 +4,12 @@ this project is a highly experimental web framework written in scala on top of `
 
 ## Create a project
 
+you can use the `sbt new` feature to create a new webstack project
+
+```
+sbt new mathieuancelin/webstack-scala-seed.g8
+```
+
 just clone the [empty-project](https://github.com/mathieuancelin/webstack-scala/tree/master/empty-project) directory and your ready to go :-)
 
 ```sh
