@@ -8,9 +8,12 @@ you can use the `sbt new` feature to create a new webstack project
 
 ```
 sbt new mathieuancelin/webstack-scala-seed.g8
+cd xxx
+sbt
+~re-start
 ```
 
-just clone the [empty-project](https://github.com/mathieuancelin/webstack-scala/tree/master/empty-project) directory and your ready to go :-)
+or just clone the [empty-project](https://github.com/mathieuancelin/webstack-scala/tree/master/empty-project) directory and your ready to go :-)
 
 ```sh
 cd empty-project
