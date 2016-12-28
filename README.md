@@ -292,6 +292,5 @@ object MyController {
 
 ## TODO
 
-* [ ] Typesafe templating system
 * [ ] Typesafe reverse routing
 * [ ] cross cutting filter in routing

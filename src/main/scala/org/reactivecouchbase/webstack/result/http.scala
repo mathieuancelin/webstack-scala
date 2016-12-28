@@ -2,7 +2,9 @@ package org.reactivecouchbase.webstack.result
 
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
+import org.reactivecouchbase.webstack.env.{Env, EnvLike}
 import play.api.libs.json.{JsValue, Json}
+import play.twirl.api.HtmlFormat
 
 import scala.annotation.implicitNotFound
 import scala.xml.{Elem, PrettyPrinter}
@@ -122,16 +124,6 @@ package object serialize {
     def apply[A: CanSerialize]: CanSerialize[A] = implicitly
   }
 
-  // @implicitNotFound("Cannot write an instance of ${A} to HTTP response. Try to define a Writeable[${A}]")
-  // case class Writeable[-A](transform: A => ByteString, contentType: String) extends CanSerialize[A] {
-  //   override def serialize(a: A): ByteString = transform(a)
-  // }
-//
-  // object Writeable {
-  //   def apply[A](transform: A => ByteString, contentType: String = MediaType.TEXT_PLAIN_VALUE): Writeable[A] =
-  //     new Writeable[A](transform, contentType)
-  // }
-
   object Implicits {
 
     implicit val canSerializeJsValue = new CanSerialize[JsValue] {
@@ -177,6 +169,11 @@ package object serialize {
     implicit val canSerializeText = new CanSerialize[Text] {
       override def serialize(a: Text): ByteString = ByteString(a.value)
       override def contentType: String = MediaType.TEXT_PLAIN_VALUE
+    }
+
+    implicit val canSerializeTwirl = new CanSerialize[HtmlFormat.Appendable] {
+      override def serialize(a: HtmlFormat.Appendable): ByteString = ByteString(a.body)
+      override def contentType: String = MediaType.TEXT_HTML_VALUE
     }
   }
 }

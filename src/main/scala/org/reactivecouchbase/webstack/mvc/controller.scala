@@ -17,6 +17,7 @@ trait Controller extends Todo with Results {
   implicit val canSerializeElem = DefaultCanHttpSerialize.canSerializeElem
   implicit val canSerializeEmptyContent = DefaultCanHttpSerialize.canSerializeEmptyContent
   implicit val canSerializeHtml = DefaultCanHttpSerialize.canSerializeHtml
+  implicit val canSerializeTwirl = DefaultCanHttpSerialize.canSerializeTwirl
   implicit val canSerializeJsValue = DefaultCanHttpSerialize.canSerializeJsValue
   implicit val canSerializeString = DefaultCanHttpSerialize.canSerializeString
   implicit val canSerializeText = DefaultCanHttpSerialize.canSerializeText

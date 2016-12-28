@@ -183,6 +183,10 @@ case class Result(
     copy(source = Source.single(bytes), contentType = MediaType.APPLICATION_OCTET_STREAM_VALUE)
   }
 
+  def twirlTemplate(template: play.twirl.api.HtmlFormat.Appendable): Result = {
+    text(template.body).as(template.contentType)
+  }
+
   def template(name: String, params: Map[String, _])(implicit env: EnvLike = Env): Result = {
     Try {
       val p: java.util.Map[String, _] = collection.JavaConversions.mapAsJavaMap(params)

@@ -11,6 +11,7 @@ libraryDependencies ++= Seq(
   "io.undertow" % "undertow-core" % "1.4.6.Final",
   "io.undertow" % "undertow-websockets-jsr" % "1.4.6.Final",
   "com.typesafe.play" %% "play-json" % "2.5.10",
+  "com.typesafe.play" %% "twirl-api" % "1.1.1",
   "com.typesafe" % "config" % "1.3.1",
   "org.reflections" % "reflections" % "0.9.10",
   "com.typesafe.akka" %% "akka-actor" % "2.4.11",

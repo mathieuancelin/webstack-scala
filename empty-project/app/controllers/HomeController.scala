@@ -10,8 +10,7 @@ object HomeController {
   implicit val mat = Env.defaultMaterializer
 
   def index = Action.sync { ctx =>
-    Ok.template("index",
-      Map("who" -> ctx.queryParam("who").getOrElse("World"))
-    )
+    val who = ctx.queryParam("who").getOrElse("World")
+    Ok.twirlTemplate(views.html.index(who))
   }
 }
