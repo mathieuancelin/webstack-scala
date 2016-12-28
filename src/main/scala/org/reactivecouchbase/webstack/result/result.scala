@@ -183,7 +183,7 @@ case class Result(
     copy(source = Source.single(bytes), contentType = MediaType.APPLICATION_OCTET_STREAM_VALUE)
   }
 
-  def twirlTemplate(template: play.twirl.api.HtmlFormat.Appendable): Result = {
+  def template(template: play.twirl.api.HtmlFormat.Appendable): Result = {
     text(template.body).as(template.contentType)
   }
 

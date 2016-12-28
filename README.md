@@ -58,11 +58,16 @@ object MyController {
   implicit val mat = Env.defaultMaterializer
 
   def index = Action.sync { ctx =>
-    // return the handlebars template located in res/templates/index.html
+    // return the handlebar template located at res/templates/index.html
     Ok.template("index",
       Map("who" -> ctx.queryParam("who").getOrElse("World"))
     )
   }
+
+  def about = Action.sync { ctx =>
+      // return the Twril template located at app/views/about.scala.html
+      Ok.template(views.html.about("About")
+    }
 
   def users = Action.async { ctx =>
     // User.fetchAll returns a Future[JsArray]

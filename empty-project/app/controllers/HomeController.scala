@@ -11,6 +11,6 @@ object HomeController {
 
   def index = Action.sync { ctx =>
     val who = ctx.queryParam("who").getOrElse("World")
-    Ok.twirlTemplate(views.html.index(who))
+    Ok.template(views.html.index(who))
   }
 }
