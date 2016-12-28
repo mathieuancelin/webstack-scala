@@ -7,6 +7,7 @@ import com.typesafe.config.ConfigFactory
 import org.reactivecouchbase.webstack.config.Configuration
 import org.reactivecouchbase.webstack.mvc.SessionConfig
 import org.reactivecouchbase.webstack.result.{TemplateConfig, TemplatesResolver}
+import org.reactivecouchbase.webstack.ws.{WSRequest, WebSocketClientRequest}
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.libs.json.{JsObject, JsString, Json, Writes}
 
@@ -64,7 +65,7 @@ object EnvLike {
   }
 }
 
-@implicitNotFound("Cannot find an instance of EnvLike. Try to create one or use 'import org.reactivecouchbase.webstack.env.Env.Implicits._'")
+@implicitNotFound("Cannot find an instance of EnvLike. Try to create one or use `org.reactivecouchbase.webstack.env.Env` as an implicit or use `import org.reactivecouchbase.webstack.env.Env.Implicits._`")
 trait EnvLike {
 
   // provided
@@ -104,6 +105,11 @@ trait EnvLike {
       case Some(cause) => obj ++ throwableWriter.writes(cause).as[JsObject]
       case None => obj
     }
+  }
+
+  object WS {
+    def host(host: String, _port: Int = 80): WSRequest = org.reactivecouchbase.webstack.ws.WS.host(host, _port)(EnvLike.this)
+    def webSocketHost(host: String): WebSocketClientRequest = org.reactivecouchbase.webstack.ws.WS.webSocketHost(host)(EnvLike.this)
   }
 }
 

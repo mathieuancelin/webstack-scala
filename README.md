@@ -283,7 +283,7 @@ object MyController {
     val sink = Sink.head[Message]
     val source = Source.single("Hello World!")
     val flow = Flow.fromSinkAndSourceMat(sink, source)(Keep.left[Future[Message], Cancellable])
-    WS.websocketHost("ws://echo.websocket.org/").call(flow).materialized.map { message =>
+    WS.webSocketHost("ws://echo.websocket.org/").call(flow).materialized.map { message =>
       Ok.text(message.asTextMessage.getStrictText)
     }
   }

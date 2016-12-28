@@ -472,7 +472,7 @@ class BasicTestSpec extends FlatSpec with Matchers with BeforeAndAfterAll {
     val sink = Sink.head[Message]
     val source = jsonSource(Json.obj("hello" ->"world"), 100)
     val flow = Flow.fromSinkAndSourceMat(sink, source)(Keep.left[Future[Message], Cancellable])
-    val future = WS.websocketHost("ws://echo.websocket.org/").call(flow).materialized.map { message =>
+    val future = WS.webSocketHost("ws://echo.websocket.org/").call(flow).materialized.map { message =>
       Json.parse(message.asTextMessage.getStrictText).as[JsObject]
     }
     val jsonBody = future.await
@@ -483,7 +483,7 @@ class BasicTestSpec extends FlatSpec with Matchers with BeforeAndAfterAll {
     val sink = Sink.head[Message]
     val source = jsonSource(Json.obj("hello" ->"world"), 100)
     val flow: Flow[Message, Message, Future[Message]] = Flow.fromSinkAndSourceMat(sink, source)(Keep.left[Future[Message], Cancellable])
-    val future = WS.websocketHost(s"ws://localhost:$port")
+    val future = WS.webSocketHost(s"ws://localhost:$port")
         .addPathSegment("websocket")
         .addPathSegment("Mathieu")
         .call(flow)
@@ -500,7 +500,7 @@ class BasicTestSpec extends FlatSpec with Matchers with BeforeAndAfterAll {
     val sink = Sink.head[Message]
     val source = jsonSource(Json.obj("hello" ->"world"), 100)
     val flow: Flow[Message, Message, Future[Message]] = Flow.fromSinkAndSourceMat(sink, source)(Keep.left[Future[Message], Cancellable])
-    val future = WS.websocketHost(s"ws://localhost:$port")
+    val future = WS.webSocketHost(s"ws://localhost:$port")
         .addPathSegment("websocketping")
         .call(flow)
         .materialized
@@ -515,7 +515,7 @@ class BasicTestSpec extends FlatSpec with Matchers with BeforeAndAfterAll {
     implicit val system = Env.defaultActorSystem
     val promise = Promise[Seq[Message]]
     val flow = ActorFlow.actorRef(out => WebSocketClientActor.props(out, promise))
-    WS.websocketHost(s"ws://localhost:$port").addPathSegment("websocketping").callNoMat(flow)
+    WS.webSocketHost(s"ws://localhost:$port").addPathSegment("websocketping").callNoMat(flow)
     val messages = promise.future.await.map(_.asTextMessage.getStrictText)
     assert(Seq("chunk", "chunk", "chunk", "chunk", "chunk", "chunk", "chunk", "chunk", "chunk", "chunk") == messages)
   }
@@ -524,7 +524,7 @@ class BasicTestSpec extends FlatSpec with Matchers with BeforeAndAfterAll {
     val sink = Sink.head[Message]
     val source = jsonSource(Json.obj("hello" ->"world"), 100)
     val flow: Flow[Message, Message, Future[Message]] = Flow.fromSinkAndSourceMat(sink, source)(Keep.left[Future[Message], Cancellable])
-    val future = WS.websocketHost(s"ws://localhost:$port")
+    val future = WS.webSocketHost(s"ws://localhost:$port")
         .addPathSegment("websocketsimple")
         .call(flow)
         .materialized

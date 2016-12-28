@@ -34,7 +34,7 @@ object WS {
     }
   }
 
-  def websocketHost(host: String)(implicit env: EnvLike = Env): WebSocketClientRequest = WebSocketClientRequest(env, host, "")
+  def webSocketHost(host: String)(implicit env: EnvLike = Env): WebSocketClientRequest = WebSocketClientRequest(env, host, "")
 }
 
 case class WSBody(bytes: ByteString) {
