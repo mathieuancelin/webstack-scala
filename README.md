@@ -303,5 +303,4 @@ object MyController {
   * [x] utilisation dans result
 * cross cutting filter in routing
   * base action that use filters
-* Action[Ctx]
-  * like play action builder
+* [x] Action[Ctx]

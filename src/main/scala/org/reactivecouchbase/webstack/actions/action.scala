@@ -9,63 +9,63 @@ import scala.util.{Failure, Success, Try}
 
 object Action {
 
-  private[actions] val emptyAction = ActionStep { (request, block) =>
+  private[actions] val emptyAction = ActionStep[RequestContext] { (request, block) =>
     Try(block(request)) match {
       case Success(s) => s
       case Failure(e) => {
         request.env.logger.error("Empty action error", e)
-        Future.successful(transformError(e, request))
+        Future.successful(transformError(e, request.env))
       }
     }
   }
 
-  private[actions] def transformError(t: Throwable, request: RequestContext): Result = {
-    Results.InternalServerError.json(request.env.throwableWriter.writes(t))
+  private[actions] def transformError(t: Throwable, env: EnvLike): Result = {
+    Results.InternalServerError.json(env.throwableWriter.writes(t))
   }
 
-  def sync(block: RequestContext => Result)(implicit env: EnvLike = Env): Action = {
+  def sync(block: RequestContext => Result)(implicit env: EnvLike = Env): Action[RequestContext] = {
     emptyAction.sync(block)(env)
   }
 
-  def async(block: RequestContext => Future[Result])(implicit env: EnvLike = Env, ec: ExecutionContext): Action = {
+  def async(block: RequestContext => Future[Result])(implicit env: EnvLike = Env, ec: ExecutionContext): Action[RequestContext] = {
     emptyAction.async(block)(env, ec)
   }
 }
 
-class Action(actionStep: ActionStep, rcBuilder: HttpServerExchange => RequestContext, block: RequestContext => Future[Result], val ec: ExecutionContext) {
+class Action[A](actionStep: ActionStep[A], rcBuilder: HttpServerExchange => RequestContext, block: A => Future[Result], val ec: ExecutionContext) {
   def run(httpServerExchange: HttpServerExchange): Future[Result] = {
     implicit val e = ec
     Try {
       val rc = rcBuilder.apply(httpServerExchange)
       val result = actionStep.innerInvoke(rc, block)
       result.recoverWith {
-        case t => Future.successful(Action.transformError(t, rc))
+        case t => Future.successful(Action.transformError(t, rc.env))
       }
     } get
   }
 }
 
 object ActionStep {
-  def apply(f: (RequestContext, RequestContext => Future[Result]) => Future[Result]): ActionStep = new ActionStep {
-    override def invoke(request: RequestContext, block: RequestContext => Future[Result]): Future[Result] = f(request, block)
+  def apply[A](f: (RequestContext, A => Future[Result]) => Future[Result]): ActionStep[A] = new ActionStep[A] {
+    override def invoke(request: RequestContext, block: A => Future[Result]): Future[Result] = f(request, block)
   }
 }
 
-trait ActionStep {
+trait ActionStep[A] {
 
-  def invoke(request: RequestContext, block: RequestContext => Future[Result]): Future[Result]
+  def invoke(request: RequestContext, block: A => Future[Result]): Future[Result]
 
-  def innerInvoke(request: RequestContext, block: RequestContext => Future[Result]): Future[Result] = {
+  def innerInvoke(request: RequestContext, block: A => Future[Result]): Future[Result] = {
     Try(this.invoke(request, block)) match {
       case Success(e) => e
       case Failure(e) => {
         request.env.logger.error("innerInvoke action error", e)
-        Future.successful(Action.transformError(e, request))
+        Future.successful(Action.transformError(e, request.env))
       }
     }
   }
 
-  def sync(block: RequestContext => Result)(implicit env: EnvLike = Env): Action = {
+  def sync(block: A => Result)(implicit env: EnvLike = Env): Action[A] = {
     implicit val ec = env.blockingExecutionContext
     async { req =>
       Future {
@@ -73,26 +73,26 @@ trait ActionStep {
           case Success(e) => e
           case Failure(e) => {
             env.logger.error("Sync action error", e)
-            Action.transformError(e, req)
+            Action.transformError(e, env)
           }
         }
       }
     }
   }
 
-  def async(block: RequestContext => Future[Result])(implicit env: EnvLike = Env, ec: ExecutionContext): Action = {
+  def async(block: A => Future[Result])(implicit env: EnvLike = Env, ec: ExecutionContext): Action[A] = {
     def rcBuilder(ex: HttpServerExchange) = new RequestContext(Map.empty[String, AnyRef], ex, env, ec)
-    new Action(this, rcBuilder, block, ec)
+    new Action[A](this, rcBuilder, block, ec)
   }
 
-  def combine(other: ActionStep): ActionStep = {
-    val that: ActionStep = this
-    ActionStep { (request, block) =>
-      that.innerInvoke(request, r1 => other.innerInvoke(r1, block))
+  def combine[B](other: ActionStep[B]): ActionStep[B] = {
+    val that: ActionStep[A] = this
+    ActionStep[B] { (request, block) =>
+      that.innerInvoke(request, r1 => other.innerInvoke(request, block))
     }
   }
 
-  def andThen(other: ActionStep): ActionStep = combine(other)
-  def ~>(other: ActionStep): ActionStep = combine(other)
-  def ↝(other: ActionStep): ActionStep = combine(other)
+  def andThen[B](other: ActionStep[B]): ActionStep[B]  = combine(other)
+  def ~>[B](other: ActionStep[B]): ActionStep[B]  = combine(other)
+  def ↝[B](other: ActionStep[B]): ActionStep[B]  = combine(other)
 }

@@ -55,9 +55,9 @@ case class RootWSRoute(app: WebStackApp) {
 }
 
 case class TemplateRoute(app: WebStackApp, method: HttpMethod, template: String) {
-  def ->(action: => Action)(implicit env: EnvLike = Env) = app.route(method, template, action)(env)
-  def →(action: => Action)(implicit env: EnvLike = Env) = app.route(method, template, action)(env)
-  def call(action: => Action)(implicit env: EnvLike = Env) = app.route(method, template, action)(env)
+  def ->(action: => Action[_])(implicit env: EnvLike = Env) = app.route(method, template, action)(env)
+  def →(action: => Action[_])(implicit env: EnvLike = Env) = app.route(method, template, action)(env)
+  def call(action: => Action[_])(implicit env: EnvLike = Env) = app.route(method, template, action)(env)
 }
 
 case class TemplateWSRoute(app: WebStackApp, template: String) {
@@ -86,7 +86,7 @@ class WebStackApp {
 
   private[webstack] val routingHandler = Handlers.routing()
 
-  def route(method: HttpMethod, url: String, action: => Action)(implicit env: EnvLike = Env) {
+  def route(method: HttpMethod, url: String, action: => Action[_])(implicit env: EnvLike = Env) {
     env.logger.debug(s"Add route on ${method.value} -> $url")
     routingHandler.add(method.name, url, ReactiveActionHandler(env, action))
   }

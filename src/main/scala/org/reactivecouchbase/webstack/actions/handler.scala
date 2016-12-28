@@ -12,10 +12,10 @@ import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 
 object ReactiveActionHandler {
-  def apply(env: EnvLike, action: => Action): ReactiveActionHandler = new ReactiveActionHandler(env, action)
+  def apply(env: EnvLike, action: => Action[_]): ReactiveActionHandler = new ReactiveActionHandler(env, action)
 }
 
-class ReactiveActionHandler(env: EnvLike, action: => Action) extends HttpHandler {
+class ReactiveActionHandler(env: EnvLike, action: => Action[_]) extends HttpHandler {
   def handleRequest(exchange: HttpServerExchange) {
     exchange.setMaxEntitySize(Long.MaxValue)
     exchange.dispatch(new Runnable {

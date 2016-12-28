@@ -9,7 +9,7 @@ import akka.http.scaladsl.model.HttpMethods
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.stream.actor.{ActorPublisher, ActorPublisherMessage}
 import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
-import org.reactivecouchbase.webstack.actions.{Action, ActionStep}
+import org.reactivecouchbase.webstack.actions.{Action, ActionStep, RequestContext}
 import org.reactivecouchbase.webstack.env.Env
 import org.reactivecouchbase.webstack.mvc.Controller
 import org.reactivecouchbase.webstack.result.Results
@@ -44,13 +44,22 @@ object BasicTestSpecRoutes extends WebStackApp {
 
 }
 
+case class LoggedContext(ctx: RequestContext)
+
 object MyController extends Controller {
 
   implicit val ec  = Env.defaultExecutionContext
   implicit val mat = Env.defaultMaterializer
   implicit val system = Env.defaultActorSystem
 
-  val ApiKeyAction = ActionStep { (ctx, block) =>
+  val LoggedAction = ActionStep[LoggedContext] { (ctx, block) =>
+    ctx.env.logger.trace(s"Calling ${ctx.uri} now")
+    block(LoggedContext(ctx)).andThen {
+      case _ => ctx.env.logger.trace(s"Call ended on ${ctx.uri}")
+    }
+  }
+
+  val ApiKeyAction = LoggedAction ~> ActionStep[RequestContext] { (ctx, block) =>
     ctx.header("Api-Key") match {
       case Some(value) if value == "12345" => block(ctx)
       case None => Future.successful(Results.Unauthorized.json(Json.obj("error" -> "you have to provide an Api-Key")))
