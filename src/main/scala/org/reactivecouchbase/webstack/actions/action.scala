@@ -9,8 +9,8 @@ import scala.util.{Failure, Success, Try}
 
 object Action {
 
-  private[actions] val emptyAction = ActionStep.from { (request, block) =>
-    Try(block.apply(request)) match {
+  private[actions] val emptyAction = ActionStep { (request, block) =>
+    Try(block(request)) match {
       case Success(s) => s
       case Failure(e) => {
         request.env.logger.error("Empty action error", e)
@@ -46,8 +46,8 @@ class Action(actionStep: ActionStep, rcBuilder: HttpServerExchange => RequestCon
 }
 
 object ActionStep {
-  def from(f: (RequestContext, Function[RequestContext, Future[Result]]) => Future[Result]): ActionStep = new ActionStep {
-    override def invoke(request: RequestContext, block: Function[RequestContext, Future[Result]]): Future[Result] = f(request, block)
+  def apply(f: (RequestContext, RequestContext => Future[Result]) => Future[Result]): ActionStep = new ActionStep {
+    override def invoke(request: RequestContext, block: RequestContext => Future[Result]): Future[Result] = f(request, block)
   }
 }
 
@@ -65,17 +65,19 @@ trait ActionStep {
     }
   }
 
-  def sync(block: Function[RequestContext, Result])(implicit env: EnvLike = Env): Action = {
+  def sync(block: RequestContext => Result)(implicit env: EnvLike = Env): Action = {
     implicit val ec = env.blockingExecutionContext
-    async { req => Future {
-      Try(block.apply(req)) match {
-        case Success(e) => e
-        case Failure(e) => {
-          env.logger.error("Sync action error", e)
-          Action.transformError(e, req)
+    async { req =>
+      Future {
+        Try(block(req)) match {
+          case Success(e) => e
+          case Failure(e) => {
+            env.logger.error("Sync action error", e)
+            Action.transformError(e, req)
+          }
         }
       }
-    } }
+    }
   }
 
   def async(block: RequestContext => Future[Result])(implicit env: EnvLike = Env, ec: ExecutionContext): Action = {
@@ -85,7 +87,7 @@ trait ActionStep {
 
   def combine(other: ActionStep): ActionStep = {
     val that: ActionStep = this
-    ActionStep.from {(request, block) =>
+    ActionStep { (request, block) =>
       that.innerInvoke(request, r1 => other.innerInvoke(r1, block))
     }
   }

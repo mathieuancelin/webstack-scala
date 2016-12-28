@@ -1,13 +1,8 @@
 package org.reactivecouchbase.webstack.mvc
 
-import akka.util.ByteString
 import org.reactivecouchbase.webstack.actions.Action
-import org.reactivecouchbase.webstack.result.{Results, Writeable}
-import play.api.libs.json.{JsValue, Json}
-
-import scala.xml.{Elem, PrettyPrinter}
-
-case class EmptyContent()
+import org.reactivecouchbase.webstack.result.Results
+import org.reactivecouchbase.webstack.result.serialize.{ Implicits => DefaultCanHttpSerialize }
 
 trait Todo {
   val Todo = Action.sync { ctx =>
@@ -16,10 +11,15 @@ trait Todo {
 }
 
 trait Controller extends Todo with Results {
- implicit val implicitJsValueWriter: Writeable[JsValue] = Writeable(value => ByteString(Json.stringify(value)))
- implicit val implicitByteStringWriter: Writeable[ByteString] = Writeable(value => value)
- implicit val implicitByteArrayWriter: Writeable[Array[Byte]] = Writeable(value => ByteString(value))
- implicit val implicitStringWriter: Writeable[String] = Writeable(value => ByteString(value))
- implicit val implicitElemWriter: Writeable[Elem] = Writeable(value => ByteString(new PrettyPrinter(80, 2).format(value)))
- implicit val implicitEmptyContentWriter: Writeable[EmptyContent] = Writeable(value => ByteString.empty)
+
+  implicit val canSerializeByteArray = DefaultCanHttpSerialize.canSerializeByteArray
+  implicit val canSerializeByteString = DefaultCanHttpSerialize.canSerializeByteString
+  implicit val canSerializeElem = DefaultCanHttpSerialize.canSerializeElem
+  implicit val canSerializeEmptyContent = DefaultCanHttpSerialize.canSerializeEmptyContent
+  implicit val canSerializeHtml = DefaultCanHttpSerialize.canSerializeHtml
+  implicit val canSerializeJsValue = DefaultCanHttpSerialize.canSerializeJsValue
+  implicit val canSerializeString = DefaultCanHttpSerialize.canSerializeString
+  implicit val canSerializeText = DefaultCanHttpSerialize.canSerializeText
+  implicit val canSerializeXml = DefaultCanHttpSerialize.canSerializeXml
+
 }

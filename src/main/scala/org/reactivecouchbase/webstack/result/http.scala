@@ -1,5 +1,12 @@
 package org.reactivecouchbase.webstack.result
 
+import akka.stream.scaladsl.Source
+import akka.util.ByteString
+import play.api.libs.json.{JsValue, Json}
+
+import scala.annotation.implicitNotFound
+import scala.xml.{Elem, PrettyPrinter}
+
 case class HttpStatus(value: Int, reasonPhrase: String)
 
 object HttpStatus {
@@ -93,4 +100,83 @@ object MediaType {
   val TEXT_XML_VALUE = "text/xml"
 }
 
+case class HttpEntity(payload: ByteString, contentType: String)
 
+sealed trait TypedContent
+case class EmptyContent() extends TypedContent
+case class Html(value: String) extends TypedContent
+case class Xml(value: String) extends TypedContent
+case class Text(value: String) extends TypedContent
+
+package object serialize {
+
+  def transformToByteString[A](value: A)(implicit evidence: CanSerialize[A]): ByteString = evidence.serialize(value)
+
+  @implicitNotFound("Cannot write an instance of ${A} to ByteString. Try to define a CanSerialize[${A}]")
+  trait CanSerialize[-A] {
+    def serialize(a: A): ByteString
+    def contentType: String
+  }
+
+  object CanByteString {
+    def apply[A: CanSerialize]: CanSerialize[A] = implicitly
+  }
+
+  // @implicitNotFound("Cannot write an instance of ${A} to HTTP response. Try to define a Writeable[${A}]")
+  // case class Writeable[-A](transform: A => ByteString, contentType: String) extends CanSerialize[A] {
+  //   override def serialize(a: A): ByteString = transform(a)
+  // }
+//
+  // object Writeable {
+  //   def apply[A](transform: A => ByteString, contentType: String = MediaType.TEXT_PLAIN_VALUE): Writeable[A] =
+  //     new Writeable[A](transform, contentType)
+  // }
+
+  object Implicits {
+
+    implicit val canSerializeJsValue = new CanSerialize[JsValue] {
+      override def serialize(a: JsValue): ByteString = ByteString(Json.stringify(a))
+      override def contentType: String = MediaType.APPLICATION_JSON_UTF8_VALUE
+    }
+
+    implicit val canSerializeByteString = new CanSerialize[ByteString] {
+      override def serialize(a: ByteString): ByteString = a
+      override def contentType: String = MediaType.APPLICATION_OCTET_STREAM_VALUE
+    }
+
+    implicit val canSerializeByteArray = new CanSerialize[Array[Byte]] {
+      override def serialize(a: Array[Byte]): ByteString = ByteString(a)
+      override def contentType: String = MediaType.APPLICATION_OCTET_STREAM_VALUE
+    }
+
+    implicit val canSerializeString = new CanSerialize[String] {
+      override def serialize(a: String): ByteString = ByteString(a)
+      override def contentType: String = MediaType.TEXT_PLAIN_VALUE
+    }
+
+    implicit val canSerializeEmptyContent = new CanSerialize[EmptyContent] {
+      override def serialize(a: EmptyContent): ByteString = ByteString.empty
+      override def contentType: String = MediaType.TEXT_PLAIN_VALUE
+    }
+
+    implicit val canSerializeElem = new CanSerialize[Elem] {
+      override def serialize(a: Elem): ByteString = ByteString(new PrettyPrinter(80, 2).format(a))
+      override def contentType: String = MediaType.TEXT_XML_VALUE
+    }
+
+    implicit val canSerializeHtml = new CanSerialize[Html] {
+      override def serialize(a: Html): ByteString = ByteString(a.value)
+      override def contentType: String = MediaType.TEXT_HTML_VALUE
+    }
+
+    implicit val canSerializeXml = new CanSerialize[Xml] {
+      override def serialize(a: Xml): ByteString = ByteString(a.value)
+      override def contentType: String = MediaType.TEXT_XML_VALUE
+    }
+
+    implicit val canSerializeText = new CanSerialize[Text] {
+      override def serialize(a: Text): ByteString = ByteString(a.value)
+      override def contentType: String = MediaType.TEXT_PLAIN_VALUE
+    }
+  }
+}

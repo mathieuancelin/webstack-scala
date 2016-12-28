@@ -13,7 +13,6 @@ import org.reactivecouchbase.webstack.actions.{Action, ActionStep}
 import org.reactivecouchbase.webstack.env.Env
 import org.reactivecouchbase.webstack.mvc.Controller
 import org.reactivecouchbase.webstack.result.Results
-import org.reactivecouchbase.webstack.result.Results._
 import org.reactivecouchbase.webstack.websocket.{ActorFlow, WebSocketAction, WebSocketContext}
 import org.reactivecouchbase.webstack.ws.WS
 import org.reactivecouchbase.webstack.{BootstrappedContext, ClassPathDirectory, WebStackApp}
@@ -51,7 +50,7 @@ object MyController extends Controller {
   implicit val mat = Env.defaultMaterializer
   implicit val system = Env.defaultActorSystem
 
-  val ApiKeyAction = ActionStep.from { (ctx, block) =>
+  val ApiKeyAction = ActionStep { (ctx, block) =>
     ctx.header("Api-Key") match {
       case Some(value) if value == "12345" => block(ctx)
       case None => Future.successful(Results.Unauthorized.json(Json.obj("error" -> "you have to provide an Api-Key")))

@@ -104,19 +104,19 @@ object MyController {
   implicit val ec  = Env.defaultExecutionContext
   implicit val mat = Env.defaultMaterializer
 
-  val ApiKeyAction = ActionStep.from { (ctx, block) =>
+  val ApiKeyAction = ActionStep { (ctx, block) =>
     ctx.header("Api-Key") match {
       case Some(value) if value == "12345" => block(ctx)
       case None => Future.successful(Results.Unauthorized.json(Json.obj("error" -> "you have to provide an Api-Key")))
     }
   }
 
-  val LogBeforeAction = ActionStep.from { (ctx, block) =>
+  val LogBeforeAction = ActionStep { (ctx, block) =>
     Env.logger.info(s"Before call of ${ctx.uri}")
     block(ctx)
   }
 
-  val LogAfterAction = ActionStep.from { (ctx, block) =>
+  val LogAfterAction = ActionStep { (ctx, block) =>
     block(ctx).andThen {
       case _ => Env.logger.info(s"After call of ${ctx.uri}")
     }
@@ -169,14 +169,15 @@ object MyController {
     ).as("text/event-stream")
   }
 
-  // send stream out a file
+  // stream out a file
   def file = Action.sync { ctx =>
     Ok.sendFile(new File("/tmp/bigfile.csv"))
   }
 
+  // tranform on the fly lines of a csv file into JSON representation
   // curl -X POST --data-binary @/tmp/users.csv -H "Content-Type: text/csv" http://localhost:9000/fromcsv
   def processCsv = Action.sync { ctx =>
-    // stream in and process
+    // stream in the file and process
     val source = ctx.bodyAsStream
       .via(Framing.delimiter(ByteString("\n"), 10000))
       .drop(1)
@@ -296,4 +297,11 @@ object MyController {
 * [x] Various helpers for webdev (codec, etc ...)
 * [x] Session based on cookie
 * [x] actual dev flow with hot reload
-  * done using sbt-revolver for now
+  * [x] done using sbt-revolver for now
+* [x] Typeclass ByteStringable(source, contenttype)
+  * [x] utilisation dans WS
+  * [x] utilisation dans result
+* cross cutting filter in routing
+  * base action that use filters
+* Action[Ctx]
+  * like play action builder

@@ -12,7 +12,8 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Sink, Source, StreamConverters}
 import akka.util.ByteString
 import org.reactivecouchbase.webstack.StreamUtils
-import org.reactivecouchbase.webstack.env.{EnvLike, Env}
+import org.reactivecouchbase.webstack.env.{Env, EnvLike}
+import org.reactivecouchbase.webstack.result.serialize.CanSerialize
 import org.reactivestreams.{Processor, Publisher}
 import play.api.libs.json.{JsValue, Json}
 
@@ -150,6 +151,10 @@ case class WSRequest(
   def withBody(body: Elem, ctype: ContentType): WSRequest = {
     val source = StreamUtils.stringToSource(new scala.xml.PrettyPrinter(80, 2).format(body))
     copy(body = source, contentType = ctype)
+  }
+
+  def withSerializableBody[A](body: A)(implicit canSerialize: CanSerialize[A]): WSRequest = {
+    copy(contentType = ContentType.parse(canSerialize.contentType).right.get, body = Source.single(canSerialize.serialize(body)))
   }
 
   def withHeaders(headers: Map[String, Seq[String]]): WSRequest = copy(headers = headers)

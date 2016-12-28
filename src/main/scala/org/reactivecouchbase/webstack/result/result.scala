@@ -10,10 +10,10 @@ import org.reactivecouchbase.webstack.StreamUtils
 import org.reactivecouchbase.webstack.actions.RequestContext
 import org.reactivecouchbase.webstack.env.{Env, EnvLike}
 import org.reactivecouchbase.webstack.mvc.{Cookie, Session}
+import org.reactivecouchbase.webstack.result.serialize.CanSerialize
 import org.reactivestreams.Publisher
 import play.api.libs.json.{JsValue, Json}
 
-import scala.annotation.implicitNotFound
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.reflect.ClassTag
 import scala.util.Try
@@ -87,14 +87,6 @@ trait Results {
   }
 }
 
-@implicitNotFound("Cannot write an instance of ${A} to HTTP response. Try to define a Writeable[${A}]")
-class Writeable[-A](val transform: A => ByteString, val contentType: String)
-
-object Writeable {
-  def apply[A](transform: A => ByteString, contentType: String = MediaType.TEXT_PLAIN_VALUE): Writeable[A] =
-    new Writeable[A](transform, contentType)
-}
-
 object Results extends Results {}
 
 case class Result(
@@ -105,8 +97,8 @@ case class Result(
   cookies: Seq[Cookie] = Seq.empty[Cookie]
 ) {
 
-  def apply[C](content: C)(implicit writeable: Writeable[C]): Result = {
-    copy(source = Source.single(writeable.transform(content)), contentType = writeable.contentType)
+  def apply[C](content: C)(implicit canSerialize: CanSerialize[C]): Result = {
+    copy(source = Source.single(canSerialize.serialize(content)), contentType = canSerialize.contentType)
   }
 
   private[webstack] val materializedValue: Promise[Any] = Promise[Any]
@@ -204,16 +196,16 @@ case class Result(
 
   def chunked(source: Source[ByteString, Any]): Result = copy(source = source)
 
-  def stream[A](source: Publisher[A])(implicit writeable: Writeable[A]): Result = {
+  def stream[A](source: Publisher[A])(implicit writeable: CanSerialize[A]): Result = {
     stream(Source.fromPublisher(source))(writeable)
   }
 
   def streamText(source: Publisher[String]): Result = {
-    stream(Source.fromPublisher(source))(Writeable(ByteString.fromString))
+    stream(Source.fromPublisher(source))(org.reactivecouchbase.webstack.result.serialize.Implicits.canSerializeString)
   }
 
-  def stream[A](source: Source[A, _])(implicit writeable: Writeable[A]): Result = {
-    copy(source = source.map(writeable.transform), contentType = writeable.contentType)
+  def stream[A](source: Source[A, _])(implicit canSerialize: CanSerialize[A]): Result = {
+    copy(source = source.map(canSerialize.serialize), contentType = canSerialize.contentType)
   }
 
   def streamText(source: Source[String, _]): Result = {
