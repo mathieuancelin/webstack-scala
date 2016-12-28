@@ -295,6 +295,18 @@ object MyController {
 }
 ```
 
+## Package for prod
+
+if you used `sbt new` to generate your app, it comes with `sbt-native-packager` configured out of the box. In your sbt session just type
+
+```
+universal:packageBin
+```
+
+and it will generate a universal zip package of your app in `target/universal`. Other format are also available
+
+http://www.scala-sbt.org/sbt-native-packager/gettingstarted.html#create-a-package
+
 ## TODO
 
 * [ ] Typesafe reverse routing
