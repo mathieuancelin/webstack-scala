@@ -95,7 +95,7 @@ object MyController {
 It is possible to create new `Action`s by composition `ActionStep`s
 
 ```scala
-import org.reactivecouchbase.webstack.actions.{ Action, ActionStep }
+import org.reactivecouchbase.webstack.actions.{ Action, ActionStep, RequestContext }
 import org.reactivecouchbase.webstack.env.Env
 import org.reactivecouchbase.webstack.result.Results._
 
@@ -104,19 +104,19 @@ object MyController {
   implicit val ec  = Env.defaultExecutionContext
   implicit val mat = Env.defaultMaterializer
 
-  val ApiKeyAction = ActionStep { (ctx, block) =>
+  val ApiKeyAction = ActionStep[RequestContext] { (ctx, block) =>
     ctx.header("Api-Key") match {
       case Some(value) if value == "12345" => block(ctx)
       case None => Future.successful(Results.Unauthorized.json(Json.obj("error" -> "you have to provide an Api-Key")))
     }
   }
 
-  val LogBeforeAction = ActionStep { (ctx, block) =>
+  val LogBeforeAction = ActionStep[RequestContext] { (ctx, block) =>
     Env.logger.info(s"Before call of ${ctx.uri}")
     block(ctx)
   }
 
-  val LogAfterAction = ActionStep { (ctx, block) =>
+  val LogAfterAction = ActionStep[RequestContext] { (ctx, block) =>
     block(ctx).andThen {
       case _ => Env.logger.info(s"After call of ${ctx.uri}")
     }
@@ -294,13 +294,4 @@ object MyController {
 
 * [ ] Typesafe templating system
 * [ ] Typesafe reverse routing
-* [x] Various helpers for webdev (codec, etc ...)
-* [x] Session based on cookie
-* [x] actual dev flow with hot reload
-  * [x] done using sbt-revolver for now
-* [x] Typeclass ByteStringable(source, contenttype)
-  * [x] utilisation dans WS
-  * [x] utilisation dans result
-* cross cutting filter in routing
-  * base action that use filters
-* [x] Action[Ctx]
+* [ ] cross cutting filter in routing
