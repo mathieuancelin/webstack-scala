@@ -1,8 +1,7 @@
 import TwirlKeys._
 
-lazy val root = (project in file(".")).enablePlugins(SbtTwirl).settings(
-  sourceDirectories in (Compile, compileTemplates) := Seq(baseDirectory.value / "app")
-)
+enablePlugins(SbtTwirl)
+enablePlugins(JavaServerAppPackaging)
 
 name := """empty-project"""
 
@@ -17,6 +16,8 @@ scalaSource in Test := baseDirectory.value / "tests"
 resourceDirectory in Compile := baseDirectory.value / "res"
 
 resourceDirectory in Test := baseDirectory.value / "res"
+
+sourceDirectories in (Compile, compileTemplates) := Seq(baseDirectory.value / "app")
 
 mainClass in Compile := Some("org.reactivecouchbase.webstack.WebStack")
 
