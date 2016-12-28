@@ -1,5 +1,7 @@
 package org.reactivecouchbase.webstack.websocket
 
+import java.net.URL
+
 import io.undertow.websockets.core.WebSocketChannel
 import io.undertow.websockets.spi.WebSocketHttpExchange
 import org.reactivecouchbase.webstack.env.EnvLike
@@ -16,7 +18,11 @@ case class WebSocketContext(state: Map[String, AnyRef], exchange: WebSocketHttpE
 
   def currentExecutionContext: ExecutionContext = env.websocketExecutionContext
   def uri: String = exchange.getRequestURI
-  def scheme: String = exchange.getRequestScheme
+  lazy val hostAndPort: String = {
+    val url = new URL(channel.getUrl.replace("wss://", "http://").replace("ws://", "http://"))
+    s"${Option(url.getHost).getOrElse("0.0.0.0")}${Option(url.getPort).map(p => s":$p").getOrElse("")}"
+  }
+  def scheme: String = channel.getRequestScheme
   def queryString: String = exchange.getQueryString
   def header(name: String): Option[String] = headers.header(name)
   def queryParam(name: String): Option[String] = queryParams.param(name)

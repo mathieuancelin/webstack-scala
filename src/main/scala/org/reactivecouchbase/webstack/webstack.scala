@@ -1,6 +1,7 @@
 package org.reactivecouchbase.webstack
 
 import java.io.File
+import java.net.URL
 import java.util.concurrent.atomic.AtomicBoolean
 
 import akka.http.scaladsl.model.{HttpMethod, HttpMethods}
@@ -9,9 +10,9 @@ import io.undertow.server.handlers.resource.{ClassPathResourceManager, FileResou
 import io.undertow.server.{HttpHandler, HttpServerExchange}
 import io.undertow.util.HttpString
 import io.undertow.{Handlers, Undertow}
-import org.reactivecouchbase.webstack.actions.{Action, ReactiveActionHandler}
+import org.reactivecouchbase.webstack.actions.{Action, ReactiveActionHandler, RequestContext}
 import org.reactivecouchbase.webstack.env.{Env, EnvLike}
-import org.reactivecouchbase.webstack.websocket.{ReactiveWebSocketHandler, WebSocketAction}
+import org.reactivecouchbase.webstack.websocket.{ReactiveWebSocketHandler, WebSocketAction, WebSocketContext}
 import org.reflections.Reflections
 import play.api.libs.json.Json
 
@@ -82,13 +83,29 @@ sealed trait ResourcesDiractory
 case class ClassPathDirectory(path: String) extends ResourcesDiractory
 case class FSDirectory(path: File) extends ResourcesDiractory
 
+case class ReverseRoute(method: String, path: String) {
+  def url(pathParams: Map[String, Any] = Map.empty[String, Any], queryParams: Map[String, Any] = Map.empty[String, Any]): String = {
+    val q = if (queryParams.isEmpty) "" else "?" + queryParams.toSeq.map(t => s"${t._1}=${t._2.toString}").mkString("&")
+    pathParams.toSeq.foldLeft(path)((p, t) => p.replace(s"{${t._1}}", t._2.toString)) + q
+  }
+  def absoluteUrl(pathParams: Map[String, Any] = Map.empty[String, Any], queryParams: Map[String, Any] = Map.empty[String, Any])(implicit ctx: RequestContext): String = {
+    val actualPath = url(pathParams, queryParams)
+    s"${ctx.scheme}://${ctx.hostAndPort}$actualPath"
+  }
+  def absoluteWebSocketUrl(pathParams: Map[String, Any] = Map.empty[String, Any], queryParams: Map[String, Any] = Map.empty[String, Any])(implicit ctx: WebSocketContext): String = {
+    val actualPath = url(pathParams, queryParams)
+    s"${ctx.scheme}://${ctx.hostAndPort}$actualPath"
+  }
+}
+
 class WebStackApp {
 
   private[webstack] val routingHandler = Handlers.routing()
 
-  def route(method: HttpMethod, url: String, action: => Action[_])(implicit env: EnvLike = Env) {
+  def route(method: HttpMethod, url: String, action: => Action[_])(implicit env: EnvLike = Env): ReverseRoute =  {
     env.logger.debug(s"Add route on ${method.value} -> $url")
     routingHandler.add(method.name, url, ReactiveActionHandler(env, action))
+    ReverseRoute(method.value, url)
   }
 
   def assets(url: String, dir: ResourcesDiractory)(implicit env: EnvLike = Env): Unit = {
@@ -102,9 +119,10 @@ class WebStackApp {
     }
   }
 
-  def websocketRoute(url: String, action: => WebSocketAction)(implicit env: EnvLike = Env) {
+  def websocketRoute(url: String, action: => WebSocketAction)(implicit env: EnvLike = Env): ReverseRoute = {
     env.logger.debug(s"Add websocket on -> $url")
     routingHandler.add("GET", url, Handlers.websocket(new ReactiveWebSocketHandler(env, action)))
+    ReverseRoute("WS", url)
   }
 
   def beforeStart {}

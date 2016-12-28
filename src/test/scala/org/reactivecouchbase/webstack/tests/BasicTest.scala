@@ -1,5 +1,6 @@
 package org.reactivecouchbase.webstack.tests
 
+import java.net.URL
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
@@ -25,7 +26,7 @@ import scala.util.Success
 
 object BasicTestSpecRoutes extends WebStackApp {
 
-  Get    →   "/hello/{name}"      →   MyController.hello
+  val hello = Get    →   "/hello/{name}"      →   MyController.hello
   Get    →   "/sayhello"          →   MyController.index
   Get    →   "/sse"               →   MyController.stream
   Get    →   "/sse2"              →   MyController.stream2
@@ -66,7 +67,8 @@ object MyController extends Controller {
     }
   }
 
-  def index = ApiKeyAction.sync { ctx =>
+  def index = ApiKeyAction.sync { implicit ctx =>
+    ctx.env.logger.info(s"the route is ${BasicTestSpecRoutes.hello.absoluteUrl(Map("name" -> "Mathieu"), Map("q" -> "who"))}")
     Ok.text("Hello World!\n")
   }
 
@@ -154,7 +156,8 @@ object MyController extends Controller {
     )
   }
 
-  def webSocketPing = WebSocketAction.accept { context =>
+  def webSocketPing = WebSocketAction.accept { implicit context =>
+    context.env.logger.info(s"the ws route is ${BasicTestSpecRoutes.hello.absoluteWebSocketUrl(Map("name" -> "Mathieu"), Map("q" -> "who"))}")
     ActorFlow.actorRef(
       out => WebsocketPing.props(context, out)
     )
