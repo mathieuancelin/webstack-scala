@@ -32,7 +32,7 @@ object Action {
   }
 }
 
-class Action[A](actionStep: ActionStep[A], rcBuilder: HttpServerExchange => RequestContext, block: A => Future[Result], val ec: ExecutionContext) {
+class Action[A](val actionStep: ActionStep[A], val rcBuilder: HttpServerExchange => RequestContext, val block: A => Future[Result], val ec: ExecutionContext) {
   def run(httpServerExchange: HttpServerExchange): Future[Result] = {
     implicit val e = ec
     Try {
@@ -98,4 +98,9 @@ trait ActionStep[A] {
 
   def andThen[B](other: ActionStep[B]): ActionStep[B]  = combine(other)
   def ~>[B](other: ActionStep[B]): ActionStep[B]  = combine(other)
+
+  private[webstack] def combine[B](action: Action[B]): Action[B] = {
+    val step = this.combine(action.actionStep)
+    new Action[B](step, action.rcBuilder, action.block, action.ec)
+  }
 }

@@ -13,10 +13,13 @@ import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 
 object ReactiveActionHandler {
-  def apply(env: EnvLike, action: => Action[_]): ReactiveActionHandler = new ReactiveActionHandler(env, action)
+  def apply(env: EnvLike, action: => Action[_], app: WebStackApp): ReactiveActionHandler = new ReactiveActionHandler(env, action, app)
 }
 
-class ReactiveActionHandler(env: EnvLike, action: => Action[_]) extends HttpHandler {
+class ReactiveActionHandler(env: EnvLike, action: => Action[_], app: WebStackApp) extends HttpHandler {
+
+  // PERFS ???
+  val actualAction: Action[_] = if (app.filters.isEmpty) action else FilterAction(app.filters:_*).combine(action)
 
   def handleRequest(exchange: HttpServerExchange) {
     exchange.setMaxEntitySize(Long.MaxValue)
@@ -24,7 +27,8 @@ class ReactiveActionHandler(env: EnvLike, action: => Action[_]) extends HttpHand
       override def run(): Unit = {
         implicit val ec = env.blockingExecutionContext
         if (exchange.isInIoThread) env.logger.warn("Request processed in IO thread !!!!")
-        action.run(exchange).andThen {
+        // action.run(exchange).andThen {
+        actualAction.run(exchange).andThen {
           case Failure(e) => {
             exchange.setStatusCode(500)
             exchange.getResponseHeaders.put(Headers.CONTENT_TYPE, "application/json")

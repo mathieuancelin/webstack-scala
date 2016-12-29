@@ -42,6 +42,17 @@ object BasicTestSpecRoutes extends WebStackApp {
   Ws     →   "/websocket/{id}"    →   MyController.webSocketWithContext
   Assets →   "/assets"            →   ClassPathDirectory("public")
 
+  override def filters: Seq[Filter] = Seq(
+    Filter { (ctx, next) =>
+      ctx.env.logger.info("Before action")
+      next(ctx)
+    },
+    Filter { (ctx, next) =>
+      next(ctx).andThen {
+        case _ => ctx.env.logger.info("After action")
+      }(MyController.ec)
+    }
+  )
 }
 
 case class LoggedContext(ctx: RequestContext)
@@ -71,7 +82,7 @@ object MyController extends Controller {
     }
   }
 
-  val ApiKeyAction = FilteredAction ~> LoggedAction ~> ActionStep[RequestContext] { (ctx, block) =>
+  val ApiKeyAction = LoggedAction ~> ActionStep[RequestContext] { (ctx, block) =>
     ctx.header("Api-Key") match {
       case Some(value) if value == "12345" => block(ctx)
       case None => Future.successful(Results.Unauthorized.json(Json.obj("error" -> "you have to provide an Api-Key")))

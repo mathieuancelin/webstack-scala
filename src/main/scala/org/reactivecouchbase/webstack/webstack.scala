@@ -104,7 +104,7 @@ class WebStackApp {
 
   def route(method: HttpMethod, url: String, action: => Action[_])(implicit env: EnvLike = Env): ReverseRoute =  {
     env.logger.debug(s"Add route on ${method.value} -> $url")
-    routingHandler.add(method.name, url, ReactiveActionHandler(env, action))
+    routingHandler.add(method.name, url, ReactiveActionHandler(env, action, this))
     ReverseRoute(method.value, url)
   }
 

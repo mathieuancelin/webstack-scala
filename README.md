@@ -310,4 +310,4 @@ http://www.scala-sbt.org/sbt-native-packager/gettingstarted.html#create-a-packag
 ## TODO
 
 * [ ] Typesafe reverse routing
-* [ ] cross cutting filter in routing
+  *  right now, its not typesafe
