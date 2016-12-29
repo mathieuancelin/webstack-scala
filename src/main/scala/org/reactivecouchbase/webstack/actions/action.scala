@@ -46,8 +46,12 @@ class Action[A](actionStep: ActionStep[A], rcBuilder: HttpServerExchange => Requ
 }
 
 object ActionStep {
+  private val FUTURE = Future.successful(Unit)
   def apply[A](f: (RequestContext, A => Future[Result]) => Future[Result]): ActionStep[A] = new ActionStep[A] {
-    override def invoke(request: RequestContext, block: A => Future[Result]): Future[Result] = f(request, block)
+    override def invoke(ctx: RequestContext, block: A => Future[Result]): Future[Result] = {
+      // PERFS ???
+      FUTURE.flatMap(_ => f(ctx, block))(ctx.currentExecutionContext)
+    }
   }
 }
 
@@ -55,8 +59,8 @@ trait ActionStep[A] {
 
   def invoke(request: RequestContext, block: A => Future[Result]): Future[Result]
 
-  def innerInvoke(request: RequestContext, block: A => Future[Result]): Future[Result] = {
-    Try(this.invoke(request, block)) match {
+  private[webstack] def innerInvoke(request: RequestContext, block: A => Future[Result]): Future[Result] = {
+    Try(invoke(request, block)) match {
       case Success(e) => e
       case Failure(e) => {
         request.env.logger.error("innerInvoke action error", e)
@@ -94,5 +98,4 @@ trait ActionStep[A] {
 
   def andThen[B](other: ActionStep[B]): ActionStep[B]  = combine(other)
   def ~>[B](other: ActionStep[B]): ActionStep[B]  = combine(other)
-  def ↝[B](other: ActionStep[B]): ActionStep[B]  = combine(other)
 }

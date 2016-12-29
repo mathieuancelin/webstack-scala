@@ -10,7 +10,7 @@ import io.undertow.server.handlers.resource.{ClassPathResourceManager, FileResou
 import io.undertow.server.{HttpHandler, HttpServerExchange}
 import io.undertow.util.HttpString
 import io.undertow.{Handlers, Undertow}
-import org.reactivecouchbase.webstack.actions.{Action, ReactiveActionHandler, RequestContext}
+import org.reactivecouchbase.webstack.actions.{Action, Filter, ReactiveActionHandler, RequestContext}
 import org.reactivecouchbase.webstack.env.{Env, EnvLike}
 import org.reactivecouchbase.webstack.websocket.{ReactiveWebSocketHandler, WebSocketAction, WebSocketContext}
 import org.reflections.Reflections
@@ -146,6 +146,9 @@ class WebStackApp {
   val Trace   = RootRoute(this, HttpMethods.TRACE  )
   val Assets  = AssetsRoute(this)
   val Ws      = RootWSRoute(this)
+
+  // TODO : implements ???
+  def filters: Seq[Filter] = Seq.empty[Filter]
 }
 
 object WebStack extends App {

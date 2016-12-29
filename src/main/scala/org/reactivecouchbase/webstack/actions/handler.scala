@@ -4,6 +4,7 @@ import akka.Done
 import akka.stream.scaladsl.{Keep, Sink}
 import io.undertow.server.{HttpHandler, HttpServerExchange}
 import io.undertow.util.{Headers, HttpString}
+import org.reactivecouchbase.webstack.WebStackApp
 import org.reactivecouchbase.webstack.env.EnvLike
 import play.api.libs.json.Json
 
@@ -16,6 +17,7 @@ object ReactiveActionHandler {
 }
 
 class ReactiveActionHandler(env: EnvLike, action: => Action[_]) extends HttpHandler {
+
   def handleRequest(exchange: HttpServerExchange) {
     exchange.setMaxEntitySize(Long.MaxValue)
     exchange.dispatch(new Runnable {
