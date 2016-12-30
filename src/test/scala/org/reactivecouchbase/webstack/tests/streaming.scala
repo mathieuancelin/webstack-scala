@@ -30,7 +30,7 @@ object StreamingController extends Controller {
   implicit val ec  = Env.defaultExecutionContext
   implicit val mat = Env.defaultMaterializer
 
-  // curl -X POST --data-binary @/tmp/bigfile.txt -H "Content-Type: text/csv" http://localhost:9000/fromcsv
+  // curl -X POST --data-binary @/tmp/bigfile.txt -H "Content-Type: text/csv" http://localhost:8888/csv
   def processCsv = Action.sync { ctx =>
     // stream in and process
     val source = ctx.bodyAsStream

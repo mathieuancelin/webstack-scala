@@ -311,3 +311,4 @@ http://www.scala-sbt.org/sbt-native-packager/gettingstarted.html#create-a-packag
 
 * [ ] Typesafe reverse routing
   *  right now, its not typesafe
+* [ ] router available on env
