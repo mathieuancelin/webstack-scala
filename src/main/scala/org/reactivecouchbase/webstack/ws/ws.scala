@@ -21,6 +21,11 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 import scala.xml.{Elem, XML}
 
+trait WsLike {
+  def host(host: String, _port: Int = 80): WSRequest
+  def webSocketHost(host: String): WebSocketClientRequest
+}
+
 object WS {
 
   def host(host: String, _port: Int = 80)(implicit env: EnvLike = Env): WSRequest = {

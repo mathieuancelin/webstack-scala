@@ -4,7 +4,7 @@ import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import org.reactivecouchbase.webstack.env.{Env, EnvLike}
 import play.api.libs.json.{JsValue, Json}
-import play.twirl.api.HtmlFormat
+import play.twirl.api._
 
 import scala.annotation.implicitNotFound
 import scala.xml.{Elem, PrettyPrinter}
@@ -171,9 +171,24 @@ package object serialize {
       override def contentType: String = MediaType.TEXT_PLAIN_VALUE
     }
 
-    implicit val canSerializeTwirl = new CanSerialize[HtmlFormat.Appendable] {
+    implicit val canSerializeTwirlHtml = new CanSerialize[HtmlFormat.Appendable] {
       override def serialize(a: HtmlFormat.Appendable): ByteString = ByteString(a.body)
-      override def contentType: String = MediaType.TEXT_HTML_VALUE
+      override def contentType: String = MimeTypes.HTML
+    }
+
+    implicit val canSerializeTwirlJs = new CanSerialize[JavaScriptFormat.Appendable] {
+      override def serialize(a: JavaScriptFormat.Appendable): ByteString = ByteString(a.body)
+      override def contentType: String = MimeTypes.JAVASCRIPT
+    }
+
+    implicit val canSerializeTwirlText = new CanSerialize[TxtFormat.Appendable] {
+      override def serialize(a: TxtFormat.Appendable): ByteString = ByteString(a.body)
+      override def contentType: String = MimeTypes.TEXT
+    }
+
+    implicit val canSerializeTwirlXml = new CanSerialize[XmlFormat.Appendable] {
+      override def serialize(a: XmlFormat.Appendable): ByteString = ByteString(a.body)
+      override def contentType: String = MimeTypes.XML
     }
   }
 }

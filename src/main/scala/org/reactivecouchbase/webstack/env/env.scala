@@ -11,7 +11,7 @@ import org.reactivecouchbase.webstack.WebStackApp
 import org.reactivecouchbase.webstack.config.Configuration
 import org.reactivecouchbase.webstack.mvc.SessionConfig
 import org.reactivecouchbase.webstack.result.{TemplateConfig, TemplatesResolver}
-import org.reactivecouchbase.webstack.ws.{WSRequest, WebSocketClientRequest}
+import org.reactivecouchbase.webstack.ws.{WSRequest, WebSocketClientRequest, WsLike}
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.libs.json.{JsObject, JsString, Json, Writes}
 
@@ -94,6 +94,10 @@ trait EnvLike {
   lazy val wsHttp = Http.get(webserviceActorSystem)
   lazy val websocketHttp = Http.get(websocketActorSystem)
   lazy val mode = Mode.valueOf(configuration.getString("app.mode").getOrElse("Prod")).getOrElse(Mode.prod)
+  lazy val WS: WsLike = new WsLike {
+    override def host(host: String, _port: Int = 80): WSRequest = org.reactivecouchbase.webstack.ws.WS.host(host, _port)(EnvLike.this)
+    override def webSocketHost(host: String): WebSocketClientRequest = org.reactivecouchbase.webstack.ws.WS.webSocketHost(host)(EnvLike.this)
+  }
 
   private[webstack] lazy val sessionConfig = new SessionConfig(configuration)
 
@@ -115,11 +119,6 @@ trait EnvLike {
       case Some(cause) => obj ++ throwableWriter.writes(cause).as[JsObject]
       case None => obj
     }
-  }
-
-  object WS {
-    def host(host: String, _port: Int = 80): WSRequest = org.reactivecouchbase.webstack.ws.WS.host(host, _port)(EnvLike.this)
-    def webSocketHost(host: String): WebSocketClientRequest = org.reactivecouchbase.webstack.ws.WS.webSocketHost(host)(EnvLike.this)
   }
 }
 

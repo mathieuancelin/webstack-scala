@@ -6,7 +6,6 @@ import org.reactivecouchbase.webstack.WebStackApp
 import org.reactivecouchbase.webstack.actions.Action
 import org.reactivecouchbase.webstack.env.Env
 import org.reactivecouchbase.webstack.mvc.Controller
-import org.reactivecouchbase.webstack.result.Results._
 import play.api.libs.json._
 
 case class User(id: String, name: String, email: String, address: String, phone: String) {
@@ -31,7 +30,8 @@ object StreamingController extends Controller {
   implicit val mat = Env.defaultMaterializer
 
   // curl -X POST --data-binary @/tmp/bigfile.txt -H "Content-Type: text/csv" http://localhost:8888/csv
-  def processCsv = Action.sync { ctx =>
+  def processCsv = Action.sync { implicit ctx =>
+    logger.info("processCsv")
     // stream in and process
     val source = ctx.bodyAsStream
       .via(Framing.delimiter(ByteString("\n"), 1000))
@@ -48,7 +48,8 @@ object StreamingController extends Controller {
     Ok.stream(source).as("application/json-stream")
   }
 
-  def processCsvAsJsonArray = Action.sync { ctx =>
+  def processCsvAsJsonArray = Action.sync { implicit ctx =>
+    logger.info("processCsvAsJsonArray")
     // stream in and process
     val source = ctx.bodyAsStream
       .via(Framing.delimiter(ByteString("\n"), 1000))
