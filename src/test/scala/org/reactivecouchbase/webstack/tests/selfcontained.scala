@@ -11,7 +11,7 @@ import play.api.libs.json.Json
 class Routes1 extends WebStackApp {
 
   // define env and controller instances
-  implicit val env = EnvLike(Configuration("""app.value = "service1""""), "service1")
+  implicit val env = EnvLike(this, Configuration("""app.value = "service1""""), "service1")
   val controller = new ServiceController()
 
   // define routes
@@ -23,7 +23,7 @@ class Routes1 extends WebStackApp {
 class Routes2 extends WebStackApp {
 
   // define env and controller instances
-  implicit val env = EnvLike(Configuration("""app.value = "service2""""), "service2")
+  implicit val env = EnvLike(this, Configuration("""app.value = "service2""""), "service2")
   val controller = new ServiceController()
 
   // define routes

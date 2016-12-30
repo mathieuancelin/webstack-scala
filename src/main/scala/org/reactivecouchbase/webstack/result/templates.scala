@@ -24,10 +24,8 @@ class TemplatesResolver(prefix: String, suffix: String) {
 
   def getTemplate(name: String): Template = {
     if (!TEMPLATES_CACHE.containsKey(name)) {
-      Try {
-        val template: Template = handlebars.compile(name)
-        TEMPLATES_CACHE.putIfAbsent(name, template)
-      } get
+      val template: Template = handlebars.compile(name)
+      TEMPLATES_CACHE.putIfAbsent(name, template)
     }
     TEMPLATES_CACHE.get(name)
   }

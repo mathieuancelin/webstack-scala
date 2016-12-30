@@ -188,12 +188,10 @@ case class Result(
   }
 
   def template(name: String, params: Map[String, _])(implicit env: EnvLike = Env): Result = {
-    Try {
-      val p: java.util.Map[String, _] = collection.JavaConversions.mapAsJavaMap(params)
-      val context: Context = Context.newBuilder(new Object()).combine(p).build
-      val template: String = env.templateResolver.getTemplate(name).apply(context)
-      text(template).as(MediaType.TEXT_HTML_VALUE)
-    } get
+    val p: java.util.Map[String, _] = collection.JavaConversions.mapAsJavaMap(params)
+    val context: Context = Context.newBuilder(new Object()).combine(p).build
+    val template: String = env.templateResolver.getTemplate(name).apply(context)
+    text(template).as(MediaType.TEXT_HTML_VALUE)
   }
 
   def chunked(source: Publisher[ByteString]): Result = chunked(Source.fromPublisher(source))

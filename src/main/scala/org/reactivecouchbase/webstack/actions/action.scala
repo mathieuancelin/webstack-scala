@@ -1,5 +1,6 @@
 package org.reactivecouchbase.webstack.actions
 
+import com.google.common.base.Throwables
 import io.undertow.server.HttpServerExchange
 import org.reactivecouchbase.webstack.env.{Env, EnvLike}
 import org.reactivecouchbase.webstack.result.{Result, Results}
@@ -32,16 +33,18 @@ object Action {
   }
 }
 
-class Action[A](val actionStep: ActionStep[A], val rcBuilder: HttpServerExchange => RequestContext, val block: A => Future[Result], val ec: ExecutionContext) {
+class Action[A](
+    private[webstack] val actionStep: ActionStep[A],
+    private[webstack] val rcBuilder: HttpServerExchange => RequestContext,
+    private[webstack] val block: A => Future[Result],
+    private[webstack] val ec: ExecutionContext) {
   def run(httpServerExchange: HttpServerExchange): Future[Result] = {
     implicit val e = ec
-    Try {
-      val rc = rcBuilder.apply(httpServerExchange)
-      val result = actionStep.innerInvoke(rc, block)
-      result.recoverWith {
-        case t => Future.successful(Action.transformError(t, rc.env))
-      }
-    } get
+    val rc = rcBuilder.apply(httpServerExchange)
+    val result = actionStep.innerInvoke(rc, block)
+    result.recoverWith {
+      case t => Future.successful(Action.transformError(t, rc.env))
+    }
   }
 }
 

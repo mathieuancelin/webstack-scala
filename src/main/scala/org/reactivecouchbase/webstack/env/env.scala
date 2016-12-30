@@ -1,9 +1,13 @@
 package org.reactivecouchbase.webstack.env
 
+import java.util.NoSuchElementException
+import java.util.concurrent.atomic.AtomicReference
+
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.stream.ActorMaterializer
 import com.typesafe.config.ConfigFactory
+import org.reactivecouchbase.webstack.WebStackApp
 import org.reactivecouchbase.webstack.config.Configuration
 import org.reactivecouchbase.webstack.mvc.SessionConfig
 import org.reactivecouchbase.webstack.result.{TemplateConfig, TemplatesResolver}
@@ -13,6 +17,8 @@ import play.api.libs.json.{JsObject, JsString, Json, Writes}
 
 import scala.annotation.implicitNotFound
 import scala.concurrent.ExecutionContext
+import scala.reflect.ClassTag
+import scala.util.Try
 
 sealed trait Mode
 case object Dev extends Mode
@@ -40,7 +46,7 @@ object EnvLike {
     ActorSystem(s"$name-system", config.underlying.atPath(s"app.systems.$name").withFallback(ConfigFactory.empty()))
   }
 
-  def apply(_configuration: Configuration, loggerName: String, templateConfig: TemplateConfig = TemplateConfig("/templates", ".html")): EnvLike = {
+  def apply(_app: WebStackApp, _configuration: Configuration, loggerName: String, templateConfig: TemplateConfig = TemplateConfig("/templates", ".html")): EnvLike = {
     val _logger = LoggerFactory.getLogger(loggerName)
     val _templatesResolver = new TemplatesResolver(templateConfig.path, templateConfig.extension)
     val _defaultActorSystem = actorSystem("global", _configuration)
@@ -55,6 +61,7 @@ object EnvLike {
       override def configuration: Configuration = _configuration
       override def logger: Logger = _logger
       override def defaultActorSystem: ActorSystem = _defaultActorSystem
+      override def rawApp: WebStackApp = _app
       override def stop(): Unit = {
         defaultActorSystem.terminate()
         blockingActorSystem.terminate()
@@ -69,6 +76,7 @@ object EnvLike {
 trait EnvLike {
 
   // provided
+  def rawApp: WebStackApp
   def logger: Logger
   def configuration: Configuration
   def defaultActorSystem: ActorSystem
@@ -93,6 +101,8 @@ trait EnvLike {
   def blockingExecutionContext: ExecutionContext = blockingActorSystem.dispatcher
   def wsExecutionContext: ExecutionContext = webserviceActorSystem.dispatcher
   def websocketExecutionContext: ExecutionContext = websocketActorSystem.dispatcher
+  def safeApp[A <: WebStackApp](implicit classTag: ClassTag[A]): Option[A] = Try(rawApp).toOption.flatMap(a => classTag.unapply(a))
+  def app[A <: WebStackApp](implicit classTag: ClassTag[A]): A = safeApp[A](classTag).get
 
   def throwableWriter: Writes[Throwable] = Writes { t =>
     val obj = Json.obj(
@@ -115,6 +125,8 @@ trait EnvLike {
 
 object Env extends EnvLike {
 
+  private[webstack] val _app = new AtomicReference[WebStackApp](null)
+
   lazy val configuration = Configuration(ConfigFactory.load)
   lazy val logger = LoggerFactory.getLogger("application")
   lazy val defaultActorSystem = EnvLike.actorSystem("global", configuration)
@@ -123,8 +135,18 @@ object Env extends EnvLike {
   lazy val websocketActorSystem = EnvLike.actorSystem("websocket", configuration)
   lazy val templateResolver = new TemplatesResolver("/templates", ".html")
 
+  override def rawApp: WebStackApp = {
+    val maybeApp = _app.get()
+    if (maybeApp == null) {
+      throw new NoSuchElementException("Current has not be set yet ...")
+    } else {
+      maybeApp
+    }
+  }
+
   override def stop(): Unit = {
     logger.info("Stopping env...")
+    _app.set(null)
     defaultActorSystem.terminate()
     blockingActorSystem.terminate()
     webserviceActorSystem.terminate()

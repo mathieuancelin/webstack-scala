@@ -37,7 +37,7 @@ case class BootstrappedContext(undertow: Undertow, app: WebStackApp, env: EnvLik
         app.afterStop
         env.stop()
       } catch {
-        case e: Exception => env.logger.error("Error while stopping server")
+        case e: Exception => env.logger.error("Error while stopping server", e)
       }
     }
   }
@@ -171,14 +171,18 @@ object WebStack extends App {
   }.getOrElse(Env.logger.error("No implementation of WebStackApp found :("))
 
   private[webstack] def startWebStackApp(
-      webstackApp: WebStackApp,
+      webStackApp: WebStackApp,
       maybeHost: Option[String] = None,
       maybePort: Option[Int] = None,
       env: EnvLike = Env): BootstrappedContext = {
+    if (env == Env) {
+      // SHOULD WORKS BECAUSE AT STARTUP ONLY
+      Env._app.set(webStackApp)
+    }
     val port = maybePort.orElse(env.configuration.getInt("app.port")).getOrElse(9000)
     val host = maybeHost.orElse(env.configuration.getString("app.host")).getOrElse("0.0.0.0")
     env.logger.trace("Starting WebStackApp")
-    val handler = webstackApp.routingHandler.setInvalidMethodHandler(new HttpHandler {
+    val handler = webStackApp.routingHandler.setInvalidMethodHandler(new HttpHandler {
       override def handleRequest(ex: HttpServerExchange): Unit = {
         ex.setStatusCode(400)
         ex.getResponseHeaders.put(HttpString.tryFromString("Content-Type"), "application/json")
@@ -193,12 +197,12 @@ object WebStack extends App {
       .addHttpListener(port, host)
       .setHandler(handler)
       .build()
-    webstackApp.beforeStart
+    webStackApp.beforeStart
     server.start()
-    webstackApp.afterStart
+    webStackApp.afterStart
     env.logger.trace("Undertow started")
     env.logger.info(s"Running WebStack on http://$host:$port")
-    val bootstrapedContext = BootstrappedContext(server, webstackApp, env)
+    val bootstrapedContext = BootstrappedContext(server, webStackApp, env)
     env.logger.trace("Init done")
     bootstrapedContext
   }
