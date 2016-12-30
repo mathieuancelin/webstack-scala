@@ -12,6 +12,7 @@ import org.reactivecouchbase.webstack.mvc.{Cookie, Session}
 import org.reactivestreams.Publisher
 import play.api.libs.json.{JsValue, Json}
 
+import scala.annotation.implicitNotFound
 import scala.collection.JavaConversions._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.reflect.ClassTag
@@ -80,6 +81,7 @@ case class RequestBody(bytes: ByteString) {
   lazy val urlForm: Map[String, List[String]] = safeUrlFrom.get
 }
 
+@implicitNotFound("Cannot find instance of RequestContext. Try define it as implicit, like `Action.async { implicit ctx => ??? }`")
 case class RequestContext(private val state: Map[String, AnyRef], exchange: HttpServerExchange, env: EnvLike, currentExecutionContext: ExecutionContext) {
 
   lazy val headers = RequestHeaders(exchange)

@@ -120,7 +120,7 @@ package object serialize {
     def contentType: String
   }
 
-  object CanByteString {
+  object CanSerialize {
     def apply[A: CanSerialize]: CanSerialize[A] = implicitly
   }
 

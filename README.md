@@ -311,3 +311,12 @@ http://www.scala-sbt.org/sbt-native-packager/gettingstarted.html#create-a-packag
 
 * [ ] Typesafe reverse routing
   *  right now, its not typesafe
+* [ ] doc for `Controller`
+* [ ] doc for `EnvAware`
+* [ ] doc for `FilterAction`
+* [ ] doc for `Filter`
+* [ ] doc for `CanSerialize`
+* [ ] doc for embedded apps
+* [ ] doc for app filters
+* [ ] doc for reverse routing
+* [ ] doc for twirl templating
