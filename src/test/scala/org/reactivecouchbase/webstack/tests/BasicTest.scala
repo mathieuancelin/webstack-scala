@@ -26,23 +26,23 @@ import scala.util.Success
 object BasicTestSpecRoutes extends WebStackApp {
 
   val hello = Get    →   "/hello/{name}"      →   MyController.hello
-  Get    →   "/sayhello"          →   MyController.index
-  Get    →   "/sse"               →   MyController.stream
-  Get    →   "/sse2"              →   MyController.stream2
-  Get    →   "/test"              →   MyController.text
-  Get    →   "/huge"              →   MyController.hugeText
-  Get    →   "/json"              →   MyController.json
-  Get    →   "/html"              →   MyController.html
-  Get    →   "/template"          →   MyController.template
-  Get    →   "/ws"                →   MyController.testWS
-  Get    →   "/ws2"               →   MyController.testWS2
-  Post   →   "/post"              →   MyController.testPost
-  Ws     →   "/websocketping"     →   MyController.webSocketPing
-  Ws     →   "/websocketsimple"   →   MyController.simpleWebsocket
-  Ws     →   "/websocket/{id}"    →   MyController.webSocketWithContext
-  Assets →   "/assets"            →   ClassPathDirectory("public")
+              Get    →   "/sayhello"          →   MyController.index
+              Get    →   "/sse"               →   MyController.stream
+              Get    →   "/sse2"              →   MyController.stream2
+              Get    →   "/test"              →   MyController.text
+              Get    →   "/huge"              →   MyController.hugeText
+              Get    →   "/json"              →   MyController.json
+              Get    →   "/html"              →   MyController.html
+              Get    →   "/template"          →   MyController.template
+              Get    →   "/ws"                →   MyController.testWS
+              Get    →   "/ws2"               →   MyController.testWS2
+              Post   →   "/post"              →   MyController.testPost
+              Ws     →   "/websocketping"     →   MyController.webSocketPing
+              Ws     →   "/websocketsimple"   →   MyController.simpleWebsocket
+              Ws     →   "/websocket/{id}"    →   MyController.webSocketWithContext
+              Assets →   "/assets"            →   ClassPathDirectory("public")
 
-  override def filters: Seq[Filter] = Seq(
+  override def filters = Seq(
     Filter { (ctx, next) =>
       ctx.env.logger.info("Before action")
       next(ctx)
@@ -63,17 +63,17 @@ object MyController extends Controller {
   implicit val mat = Env.defaultMaterializer
   implicit val system = Env.defaultActorSystem
 
-  val FilteredAction = FilterAction(
-    Filter { (ctx, next) =>
-      ctx.env.logger.info("Before action")
-      next(ctx)
-    },
-    Filter { (ctx, next) =>
-      next(ctx).andThen {
-        case _ => ctx.env.logger.info("After action")
-      }
-    }
-  )
+  // val FilteredAction = FilterAction(
+  //   Filter { (ctx, next) =>
+  //     ctx.env.logger.info("Before action")
+  //     next(ctx)
+  //   },
+  //   Filter { (ctx, next) =>
+  //     next(ctx).andThen {
+  //       case _ => ctx.env.logger.info("After action")
+  //     }
+  //   }
+  // )
 
   val LoggedAction = ActionStep[LoggedContext] { (ctx, block) =>
     ctx.env.logger.info(s"Calling ${ctx.uri} now")
