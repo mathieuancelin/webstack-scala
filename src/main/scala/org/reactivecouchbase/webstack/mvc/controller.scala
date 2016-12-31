@@ -1,18 +1,9 @@
 package org.reactivecouchbase.webstack.mvc
 
-import akka.actor.ActorSystem
-import akka.stream.Materializer
-import org.reactivecouchbase.webstack.WebStackApp
-import org.reactivecouchbase.webstack.actions.{Action, RequestContext}
-import org.reactivecouchbase.webstack.config.Configuration
-import org.reactivecouchbase.webstack.env.{EnvLike, Mode}
+import org.reactivecouchbase.webstack.actions.Action
+import org.reactivecouchbase.webstack.env.EnvAware
 import org.reactivecouchbase.webstack.result.Results
 import org.reactivecouchbase.webstack.result.serialize.{Implicits => DefaultCanHttpSerialize}
-import org.reactivecouchbase.webstack.ws.WsLike
-import org.slf4j.Logger
-
-import scala.concurrent.ExecutionContext
-import scala.reflect.ClassTag
 
 trait Todo {
   val Todo = Action.sync { ctx =>
@@ -20,7 +11,7 @@ trait Todo {
   }
 }
 
-trait Controller extends Todo with Results {
+trait Controller extends Todo with Results with EnvAware {
 
   implicit val canSerializeByteArray = DefaultCanHttpSerialize.canSerializeByteArray
   implicit val canSerializeByteString = DefaultCanHttpSerialize.canSerializeByteString
@@ -36,13 +27,13 @@ trait Controller extends Todo with Results {
   implicit val canSerializeText = DefaultCanHttpSerialize.canSerializeText
   implicit val canSerializeXml = DefaultCanHttpSerialize.canSerializeXml
 
-  def logger(implicit ctx: RequestContext): Logger = ctx.env.logger
-  def env(implicit ctx: RequestContext): EnvLike = ctx.env
-  def configuration(implicit ctx: RequestContext): Configuration = ctx.env.configuration
-  def actorSystem(implicit ctx: RequestContext): ActorSystem = ctx.env.defaultActorSystem
-  def executionContext(implicit ctx: RequestContext): ExecutionContext = ctx.env.defaultExecutionContext
-  def materializer(implicit ctx: RequestContext): Materializer = ctx.env.defaultMaterializer
-  def mode(implicit ctx: RequestContext): Mode = ctx.env.mode
-  def Ws(implicit ctx: RequestContext): WsLike = ctx.env.WS
-  def app[A <: WebStackApp](implicit ctx: RequestContext, ct: ClassTag[A]): A = ctx.env.app[A](ct)
+  // def logger(implicit ctx: RequestContext): Logger = ctx.env.logger
+  // def env(implicit ctx: RequestContext): EnvLike = ctx.env
+  // def configuration(implicit ctx: RequestContext): Configuration = ctx.env.configuration
+  // def actorSystem(implicit ctx: RequestContext): ActorSystem = ctx.env.defaultActorSystem
+  // def executionContext(implicit ctx: RequestContext): ExecutionContext = ctx.env.defaultExecutionContext
+  // def materializer(implicit ctx: RequestContext): Materializer = ctx.env.defaultMaterializer
+  // def mode(implicit ctx: RequestContext): Mode = ctx.env.mode
+  // def Ws(implicit ctx: RequestContext): WsLike = ctx.env.WS
+  // def app[A <: WebStackApp](implicit ctx: RequestContext, ct: ClassTag[A]): A = ctx.env.app[A](ct)
 }

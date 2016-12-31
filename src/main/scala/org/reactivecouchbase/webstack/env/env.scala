@@ -72,7 +72,7 @@ object EnvLike {
   }
 }
 
-@implicitNotFound("Cannot find an instance of EnvLike. Try to create one or use `org.reactivecouchbase.webstack.env.Env` as an implicit or use `import org.reactivecouchbase.webstack.env.Env.Implicits._`")
+@implicitNotFound("Cannot find an instance of EnvLike. Try to create one or use `org.reactivecouchbase.webstack.env.Env` as an implicit or use `import org.reactivecouchbase.webstack.env.Implicits._`")
 trait EnvLike {
 
   // provided
@@ -152,7 +152,8 @@ object Env extends EnvLike {
     websocketActorSystem.terminate()
   }
 
-  object Implicits {
-    implicit val env: EnvLike = Env
-  }
+}
+
+object Implicits {
+  implicit val defaultEnv: EnvLike = Env
 }

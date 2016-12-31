@@ -26,11 +26,13 @@ object StreamingRoutes extends WebStackApp with App {
 
 object StreamingController extends Controller {
 
+  import org.reactivecouchbase.webstack.env.Implicits._
+
   implicit val ec  = Env.defaultExecutionContext
   implicit val mat = Env.defaultMaterializer
 
   // curl -X POST --data-binary @/tmp/bigfile.txt -H "Content-Type: text/csv" http://localhost:8888/csv
-  def processCsv = Action.sync { implicit ctx =>
+  def processCsv = Action.sync { ctx =>
     logger.info("processCsv")
     // stream in and process
     val source = ctx.bodyAsStream
@@ -48,7 +50,7 @@ object StreamingController extends Controller {
     Ok.stream(source).as("application/json-stream")
   }
 
-  def processCsvAsJsonArray = Action.sync { implicit ctx =>
+  def processCsvAsJsonArray = Action.sync { ctx =>
     logger.info("processCsvAsJsonArray")
     // stream in and process
     val source = ctx.bodyAsStream

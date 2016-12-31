@@ -1,7 +1,6 @@
 package org.reactivecouchbase.webstack
 
 import java.io.File
-import java.net.URL
 import java.util.concurrent.atomic.AtomicBoolean
 
 import akka.http.scaladsl.model.{HttpMethod, HttpMethods}
@@ -28,13 +27,13 @@ case class BootstrappedContext(undertow: Undertow, app: WebStackApp, env: EnvLik
     override def run(): Unit = stop
   }))
 
-  def stop {
+  def stop(): Unit = {
     if (!stopped.get()) {
       try {
         stopped.getAndSet(true)
-        app.beforeStop
-        undertow.stop
-        app.afterStop
+        app.beforeStop()
+        undertow.stop()
+        app.afterStop()
         env.stop()
       } catch {
         case e: Exception => env.logger.error("Error while stopping server", e)
@@ -125,13 +124,13 @@ class WebStackApp {
     ReverseRoute("WS", url)
   }
 
-  def beforeStart {}
+  def beforeStart(): Unit = {}
 
-  def afterStart {}
+  def afterStart(): Unit = {}
 
-  def beforeStop {}
+  def beforeStop(): Unit = {}
 
-  def afterStop {}
+  def afterStop(): Unit = {}
 
   def start(host: Option[String] = None, port: Option[Int] = None)(implicit env: EnvLike = Env): BootstrappedContext = WebStack.startWebStackApp(this, host, port, env)
 
@@ -157,7 +156,7 @@ object WebStack extends App {
   new Reflections("").getSubTypesOf(classOf[WebStackApp]).headOption.map { serverClazz =>
     Try {
       classOf[WebStackApp].cast(serverClazz.getField("MODULE$").get(serverClazz))
-    } toOption match {
+    }.toOption match {
       case Some(singleton) => {
         Env.logger.info(s"Found WebStackApp object: ${serverClazz.getName.init}")
         startWebStackApp(singleton)
@@ -197,9 +196,9 @@ object WebStack extends App {
       .addHttpListener(port, host)
       .setHandler(handler)
       .build()
-    webStackApp.beforeStart
+    webStackApp.beforeStart()
     server.start()
-    webStackApp.afterStart
+    webStackApp.afterStart()
     env.logger.trace("Undertow started")
     env.logger.info(s"Running WebStack on http://$host:$port")
     val bootstrapedContext = BootstrappedContext(server, webStackApp, env)
