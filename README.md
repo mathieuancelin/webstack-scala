@@ -30,7 +30,7 @@ the routes of your application are located in `app/Routes.scala` and looks like
 import controllers._
 import org.reactivecouchbase.webstack.{ClassPathDirectory, WebStackApp}
 
-// you can you a class too
+// you can use a class too
 object Routes extends WebStackApp {
 
   Get    →       "/"           →         HomeController.index
