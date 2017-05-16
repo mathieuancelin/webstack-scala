@@ -1,6 +1,5 @@
 package org.reactivecouchbase.webstack.actions
 
-import com.google.common.base.Throwables
 import io.undertow.server.HttpServerExchange
 import org.reactivecouchbase.webstack.env.{Env, EnvLike}
 import org.reactivecouchbase.webstack.result.{Result, Results}
@@ -38,6 +37,7 @@ class Action[A](
     private[webstack] val rcBuilder: HttpServerExchange => RequestContext,
     private[webstack] val block: A => Future[Result],
     private[webstack] val ec: ExecutionContext) {
+
   def run(httpServerExchange: HttpServerExchange): Future[Result] = {
     implicit val e = ec
     val rc = rcBuilder.apply(httpServerExchange)

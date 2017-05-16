@@ -21,7 +21,7 @@ class ReactiveActionHandler(env: EnvLike, action: => Action[_], app: WebStackApp
   // PERFS ???
   val actualAction: Action[_] = if (app.filters.isEmpty) action else FilterAction(app.filters:_*).combine(action)
 
-  def handleRequest(exchange: HttpServerExchange) {
+  def handleRequest(exchange: HttpServerExchange): Unit = {
     exchange.setMaxEntitySize(Long.MaxValue)
     exchange.dispatch(new Runnable {
       override def run(): Unit = {
@@ -69,9 +69,3 @@ class ReactiveActionHandler(env: EnvLike, action: => Action[_], app: WebStackApp
     })
   }
 }
-
-
-
-
-
-

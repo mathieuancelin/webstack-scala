@@ -106,6 +106,7 @@ class SessionConfig(configuration: Configuration) {
   lazy val cookieSecure = configuration.getBoolean("app.session.secure").getOrElse(true)
   lazy val cookieHttpOnly = configuration.getBoolean("app.session.httpOnly").getOrElse(true)
   lazy val cookieMaxAge = configuration.getInt("app.session.maxAge").getOrElse(-1)
-  lazy val secret = DigestUtils.md5Hex(configuration.getString("app.secret").getOrElse("Some hardcoded value here"))
-    .getBytes(StandardCharsets.UTF_8)
+  lazy val secret = DigestUtils
+                      .md5Hex(configuration.getString("app.secret").getOrElse("Some hardcoded value here"))
+                      .getBytes(StandardCharsets.UTF_8)
 }

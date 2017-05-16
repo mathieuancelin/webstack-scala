@@ -6,17 +6,16 @@ import java.nio.file.Path
 import akka.stream.scaladsl.{FileIO, Source, StreamConverters}
 import akka.util.ByteString
 import com.github.jknack.handlebars.Context
-import org.reactivecouchbase.webstack.StreamUtils
 import org.reactivecouchbase.webstack.actions.RequestContext
 import org.reactivecouchbase.webstack.env.{Env, EnvLike}
 import org.reactivecouchbase.webstack.mvc.{Cookie, Session}
 import org.reactivecouchbase.webstack.result.serialize.CanSerialize
+import org.reactivecouchbase.webstack.{ReverseRoute, StreamUtils}
 import org.reactivestreams.Publisher
 import play.api.libs.json.{JsValue, Json}
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.reflect.ClassTag
-import scala.util.Try
 import scala.xml.Elem
 
 trait Results {
@@ -35,12 +34,24 @@ trait Results {
     Result(HttpStatus.MOVED_PERMANENTLY.value, Source.empty[ByteString], "text/plain", Map(("Location", Seq(url))), Seq.empty[Cookie])
   }
 
+  def MovedPermanently(route: ReverseRoute, pathParams: Map[String, Any] = Map.empty[String, Any], queryParams: Map[String, Any] = Map.empty[String, Any]) = {
+    Result(HttpStatus.MOVED_PERMANENTLY.value, Source.empty[ByteString], "text/plain", Map(("Location", Seq(route.url(pathParams, queryParams)))), Seq.empty[Cookie])
+  }
+
   def Found(url: String) = {
     Result(HttpStatus.FOUND.value, Source.empty[ByteString], "text/plain", Map(("Location", Seq(url))), Seq.empty[Cookie])
   }
 
+  def Found(route: ReverseRoute, pathParams: Map[String, Any] = Map.empty[String, Any], queryParams: Map[String, Any] = Map.empty[String, Any]) = {
+    Result(HttpStatus.FOUND.value, Source.empty[ByteString], "text/plain", Map(("Location", Seq(route.url(pathParams, queryParams)))), Seq.empty[Cookie])
+  }
+
   def SeeOther(url: String) = {
     Result(HttpStatus.SEE_OTHER.value, Source.empty[ByteString], "text/plain", Map(("Location", Seq(url))), Seq.empty[Cookie])
+  }
+
+  def SeeOther(route: ReverseRoute, pathParams: Map[String, Any] = Map.empty[String, Any], queryParams: Map[String, Any] = Map.empty[String, Any]) = {
+    Result(HttpStatus.SEE_OTHER.value, Source.empty[ByteString], "text/plain", Map(("Location", Seq(route.url(pathParams, queryParams)))), Seq.empty[Cookie])
   }
 
   val NotModified = Result(HttpStatus.NOT_MODIFIED.value)
@@ -49,8 +60,16 @@ trait Results {
     Result(HttpStatus.TEMPORARY_REDIRECT.value, Source.empty[ByteString], "text/plain", Map(("Location", Seq(url))), Seq.empty[Cookie])
   }
 
+  def TemporaryRedirect(route: ReverseRoute, pathParams: Map[String, Any] = Map.empty[String, Any], queryParams: Map[String, Any] = Map.empty[String, Any]) = {
+    Result(HttpStatus.TEMPORARY_REDIRECT.value, Source.empty[ByteString], "text/plain", Map(("Location", Seq(route.url(pathParams, queryParams)))), Seq.empty[Cookie])
+  }
+
   def PermanentRedirect(url: String) = {
     Result(HttpStatus.PERMANENT_REDIRECT.value, Source.empty[ByteString], "text/plain", Map(("Location", Seq(url))), Seq.empty[Cookie])
+  }
+
+  def PermanentRedirect(route: ReverseRoute, pathParams: Map[String, Any] = Map.empty[String, Any], queryParams: Map[String, Any] = Map.empty[String, Any]) = {
+    Result(HttpStatus.PERMANENT_REDIRECT.value, Source.empty[ByteString], "text/plain", Map(("Location", Seq(route.url(pathParams, queryParams)))), Seq.empty[Cookie])
   }
 
   val BadRequest = Result(HttpStatus.BAD_REQUEST.value)
@@ -82,8 +101,12 @@ trait Results {
 
   def status(code: Int) = Result(code)
 
-  def redirect(url: String) = {
-    Result(200, Source.empty[ByteString], "text/plain", Map(("Location", Seq(url))), Seq.empty[Cookie])
+  def Redirect(url: String): Result = {
+    Result(HttpStatus.SEE_OTHER.value, Source.empty[ByteString], "text/plain", Map(("Location", Seq(url))), Seq.empty[Cookie])
+  }
+
+  def Redirect(route: ReverseRoute, pathParams: Map[String, Any] = Map.empty[String, Any], queryParams: Map[String, Any] = Map.empty[String, Any]): Result = {
+    Result(HttpStatus.SEE_OTHER.value, Source.empty[ByteString], "text/plain", Map(("Location", Seq(route.url(pathParams, queryParams)))), Seq.empty[Cookie])
   }
 }
 
