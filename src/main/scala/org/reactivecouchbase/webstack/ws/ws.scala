@@ -3,7 +3,6 @@ package org.reactivecouchbase.webstack.ws
 import java.io.InputStream
 
 import akka.http.scaladsl.Http.OutgoingConnection
-import akka.http.scaladsl.coding.Gzip
 import akka.http.scaladsl.model.HttpHeader.ParsingResult.Ok
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.RawHeader
@@ -54,7 +53,7 @@ case class WSResponse(underlying: HttpResponse) {
 
   def bodyAsStream: Source[ByteString, _] = {
     header("Content-Encoding") match {
-      case Some("gzip") => rawBodyAsStream.via(Gzip.decoderFlow)
+      case Some("gzip") => rawBodyAsStream.via(akka.stream.scaladsl.Compression.gunzip())
       case _ => rawBodyAsStream
     }
   }

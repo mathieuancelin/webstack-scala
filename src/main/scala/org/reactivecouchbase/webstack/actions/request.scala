@@ -2,7 +2,6 @@ package org.reactivecouchbase.webstack.actions
 
 import java.net.InetSocketAddress
 
-import akka.http.scaladsl.coding.Gzip
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source, StreamConverters}
 import akka.util.ByteString
@@ -137,7 +136,7 @@ case class RequestContext(private val state: Map[String, AnyRef], exchange: Http
 
   def bodyAsStream: Source[ByteString, Any] = {
     header("Content-Encoding") match {
-      case Some("gzip") => rawBodyAsStream.via(Gzip.decoderFlow)
+      case Some("gzip") => rawBodyAsStream.via(akka.stream.scaladsl.Compression.gunzip())
       case _ => rawBodyAsStream
     }
   }

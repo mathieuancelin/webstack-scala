@@ -1,25 +1,24 @@
 organization := "org.reactivecouchbase.webstack"
 name := """webstack-core-scala"""
-version := "0.1.0-SNAPSHOT"
+version := "0.2.0-SNAPSHOT"
 
-scalaVersion := "2.11.8"
+scalaVersion := "2.12.2"
 
 libraryDependencies ++= Seq(
-  "io.undertow" % "undertow-core" % "1.4.6.Final",
-  "io.undertow" % "undertow-websockets-jsr" % "1.4.6.Final",
-  "com.typesafe.play" %% "play-json" % "2.5.10",
-  "com.typesafe.play" %% "twirl-api" % "1.1.1",
+  "io.undertow" % "undertow-core" % "1.4.14.Final",
+  "io.undertow" % "undertow-websockets-jsr" % "1.4.14.Final",
+  "com.typesafe.play" %% "play-json" % "2.6.0-M7",
+  "com.typesafe.play" %% "twirl-api" % "1.3.0",
   "com.typesafe" % "config" % "1.3.1",
   "org.reflections" % "reflections" % "0.9.10",
-  "com.typesafe.akka" %% "akka-actor" % "2.4.11",
-  "com.typesafe.akka" %% "akka-stream" % "2.4.11",
-  "com.typesafe.akka" %% "akka-http-core" % "2.4.11",
-  "com.typesafe.akka" %% "akka-http-experimental" % "2.4.11",
+  "com.typesafe.akka" %% "akka-actor" % "2.5.1",
+  "com.typesafe.akka" %% "akka-stream" % "2.5.1",
+  "com.typesafe.akka" %% "akka-http-core" % "10.0.6",
   "com.github.jknack" % "handlebars" % "4.0.6",
   "ch.qos.logback" % "logback-classic" % "1.1.8",
   "org.scala-lang.modules" %% "scala-xml" % "1.0.6",
   "commons-codec" % "commons-codec" % "1.10",
-  "org.scalatest" %% "scalatest" % "2.2.4" % "test"
+  "org.scalatest" %% "scalatest" % "3.0.3" % "test"
 )
 
 val local: Def.Initialize[Option[sbt.Resolver]] = version { (version: String) =>

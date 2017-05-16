@@ -7,7 +7,7 @@ name := """empty-project"""
 
 version := "1.0"
 
-scalaVersion := "2.11.8"
+scalaVersion := "2.12.2"
 
 scalaSource in Compile := baseDirectory.value / "app"
 
@@ -23,7 +23,7 @@ mainClass in Compile := Some("org.reactivecouchbase.webstack.WebStack")
 
 mainClass in reStart := Some("org.reactivecouchbase.webstack.WebStack")
 
-libraryDependencies += "org.reactivecouchbase.webstack" %% "webstack-core-scala" % "0.1.0-SNAPSHOT"
+libraryDependencies += "org.reactivecouchbase.webstack" %% "webstack-core-scala" % "0.2.0-SNAPSHOT"
 
-libraryDependencies += "org.scalatest" %% "scalatest" % "2.2.4" % "test"
+libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.3" % "test"
 
