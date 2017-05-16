@@ -7,7 +7,6 @@ scalaVersion := "2.11.8"
 organization := "org.reactivecouchbase.webstack"
 
 libraryDependencies ++= Seq(
-
   "io.undertow" % "undertow-core" % "1.4.6.Final",
   "io.undertow" % "undertow-websockets-jsr" % "1.4.6.Final",
   "com.typesafe.play" %% "play-json" % "2.5.10",
@@ -23,7 +22,6 @@ libraryDependencies ++= Seq(
   "org.scala-lang.modules" %% "scala-xml" % "1.0.6",
   "commons-codec" % "commons-codec" % "1.10",
   "org.scalatest" %% "scalatest" % "2.2.4" % "test"
-
 )
 
 val local: Def.Initialize[Option[sbt.Resolver]] = version { (version: String) =>

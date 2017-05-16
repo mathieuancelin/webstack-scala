@@ -21,27 +21,6 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 import scala.xml.{Elem, XML}
 
-trait WsLike {
-  def host(host: String, _port: Int = 80): WSRequest
-  def webSocketHost(host: String): WebSocketClientRequest
-}
-
-object WS {
-
-  def host(host: String, _port: Int = 80)(implicit env: EnvLike = Env): WSRequest = {
-    val port = Option(host).map(_.replace("http://", "").replace("https://", "")).filter(_.contains(":")).map(_.split(":")(1).toInt).getOrElse(_port)
-    if (host.startsWith("https")) {
-      val connectionFlow = env.wsHttp.outgoingConnectionHttps(host.replace(s":$port", "").replace("https://", ""), port)
-      WSRequest(connectionFlow, host, port)
-    } else {
-      val connectionFlow = env.wsHttp.outgoingConnection(host.replace(s":$port", "").replace("http://", ""), port)
-      WSRequest(connectionFlow, host, port)
-    }
-  }
-
-  def webSocketHost(host: String)(implicit env: EnvLike = Env): WebSocketClientRequest = WebSocketClientRequest(env, host, "")
-}
-
 case class WSBody(bytes: ByteString) {
   lazy val string = bytes.utf8String
   lazy val json: JsValue = safeJson.get
@@ -89,11 +68,26 @@ case class WSResponse(underlying: HttpResponse) {
   }
 }
 
-case class WSRequest(
+object HttpClient {
+
+  def apply(protocol: String, host: String, port: Int = 80)(implicit env: EnvLike = Env): HttpClientFinal = {
+    if (protocol.equalsIgnoreCase("https")) {
+      val connectionFlow = env.wsHttp.outgoingConnectionHttps(host, port)
+      HttpClientFinal(connectionFlow, protocol, host, port)
+    } else {
+      val connectionFlow = env.wsHttp.outgoingConnection(host, port)
+      HttpClientFinal(connectionFlow, protocol, host, port)
+    }
+  }
+}
+
+// TODO : rename
+case class HttpClientFinal(
   private val connectionFlow: Flow[HttpRequest, HttpResponse, Future[OutgoingConnection]],
+  protocol: String,
   host: String,
   port: Int,
-  path: String = "",
+  path: String = "/",
   method: HttpMethod = HttpMethods.GET,
   body: Source[ByteString, _] = Source.empty[ByteString],
   contentType: ContentType = ContentTypes.`text/plain(UTF-8)`,
@@ -101,70 +95,70 @@ case class WSRequest(
   queryParams: Map[String, Seq[String]] = Map.empty[String, Seq[String]]
 ) {
 
-  def withPath(path: String): WSRequest = copy(path = path)
-  def addPathSegment(segment: String): WSRequest = copy(path = s"$path/$segment")
-  def addPathSegment(path: Any): WSRequest = addPathSegment(path.toString)
-  def withMethod(method: HttpMethod): WSRequest = copy(method = method)
-  def withMethod(method: String): WSRequest = copy(method = HttpMethods.getForKey(method).get)
-  def withBody(body: Publisher[ByteString]): WSRequest = copy(body = Source.fromPublisher(body))
-  def withBody(body: Source[ByteString, _]): WSRequest = copy(body = body)
-  def withBody(body: Publisher[ByteString], ctype: ContentType): WSRequest = copy(body = Source.fromPublisher(body), contentType = ctype)
-  def withBody(body: Source[ByteString, _], ctype: ContentType): WSRequest = copy(body = body, contentType = ctype)
+  def withPath(path: String): HttpClientFinal = copy(path = path)
+  def addPathSegment(segment: String): HttpClientFinal = copy(path = s"$path/$segment")
+  def addPathSegment(path: Any): HttpClientFinal = addPathSegment(path.toString)
+  def withMethod(method: HttpMethod): HttpClientFinal = copy(method = method)
+  def withMethod(method: String): HttpClientFinal = copy(method = HttpMethods.getForKey(method).get)
+  def withBody(body: Publisher[ByteString]): HttpClientFinal = copy(body = Source.fromPublisher(body))
+  def withBody(body: Source[ByteString, _]): HttpClientFinal = copy(body = body)
+  def withBody(body: Publisher[ByteString], ctype: ContentType): HttpClientFinal = copy(body = Source.fromPublisher(body), contentType = ctype)
+  def withBody(body: Source[ByteString, _], ctype: ContentType): HttpClientFinal = copy(body = body, contentType = ctype)
 
-  def withBody(body: JsValue): WSRequest = {
+  def withBody(body: JsValue): HttpClientFinal = {
     val source: Source[ByteString, _] = StreamUtils.stringToSource(Json.stringify(body))
     copy(body = source, contentType = ContentTypes.`application/json`)
   }
 
-  def withBody(body: String): WSRequest = {
+  def withBody(body: String): HttpClientFinal = {
     copy(body = StreamUtils.stringToSource(body), contentType = ContentTypes.`text/plain(UTF-8)`)
   }
 
-  def withBody(body: String, ctype: ContentType): WSRequest = {
+  def withBody(body: String, ctype: ContentType): HttpClientFinal = {
     copy(body = StreamUtils.stringToSource(body), contentType = ctype)
   }
 
-  def withBody(body: ByteString): WSRequest = {
+  def withBody(body: ByteString): HttpClientFinal = {
     copy(body = Source.single(body), contentType = ContentTypes.`application/octet-stream`)
   }
 
-  def withBody(body: ByteString, ctype: ContentType): WSRequest = {
+  def withBody(body: ByteString, ctype: ContentType): HttpClientFinal = {
     copy(body = Source.single(body), contentType = ctype)
   }
 
-  def withBody(body: Array[Byte]): WSRequest = {
+  def withBody(body: Array[Byte]): HttpClientFinal = {
     copy(body = StreamUtils.bytesToSource(body), contentType = ContentTypes.`text/plain(UTF-8)`)
   }
 
-  def withBody(body: Array[Byte], ctype: ContentType): WSRequest = {
+  def withBody(body: Array[Byte], ctype: ContentType): HttpClientFinal = {
     copy(body = StreamUtils.bytesToSource(body), contentType = ctype)
   }
 
-  def withBody(body: InputStream): WSRequest = {
+  def withBody(body: InputStream): HttpClientFinal = {
     copy(body = StreamConverters.fromInputStream(() => body), contentType = ContentTypes.`application/octet-stream`)
   }
 
-  def withBody(body: InputStream, ctype: ContentType): WSRequest = {
+  def withBody(body: InputStream, ctype: ContentType): HttpClientFinal = {
     copy(body = StreamConverters.fromInputStream(() => body), contentType = ctype)
   }
 
-  def withBody(body: Elem): WSRequest = {
+  def withBody(body: Elem): HttpClientFinal = {
     val source = StreamUtils.stringToSource(new scala.xml.PrettyPrinter(80, 2).format(body))
     copy(body = source, contentType = ContentType.parse("application/xml").right.get)
   }
 
-  def withBody(body: Elem, ctype: ContentType): WSRequest = {
+  def withBody(body: Elem, ctype: ContentType): HttpClientFinal = {
     val source = StreamUtils.stringToSource(new scala.xml.PrettyPrinter(80, 2).format(body))
     copy(body = source, contentType = ctype)
   }
 
-  def withSerializableBody[A](body: A)(implicit canSerialize: CanSerialize[A]): WSRequest = {
+  def withSerializableBody[A](body: A)(implicit canSerialize: CanSerialize[A]): HttpClientFinal = {
     copy(contentType = ContentType.parse(canSerialize.contentType).right.get, body = Source.single(canSerialize.serialize(body)))
   }
 
-  def withHeaders(headers: Map[String, Seq[String]]): WSRequest = copy(headers = headers)
+  def withHeaders(headers: Map[String, Seq[String]]): HttpClientFinal = copy(headers = headers)
 
-  def withHeader(header: (String, String)): WSRequest = {
+  def withHeader(header: (String, String)): HttpClientFinal = {
     val (name, value) = header
     val values = headers.get(name) match {
       case Some(vals) => vals :+ value
@@ -173,9 +167,9 @@ case class WSRequest(
     copy(headers = headers + (name -> values))
   }
 
-  def withQueryParams(queryString: Map[String, Seq[String]]): WSRequest = copy(queryParams = queryString)
+  def withQueryParams(queryString: Map[String, Seq[String]]): HttpClientFinal = copy(queryParams = queryString)
 
-  def withQueryParam(qparam: (String, Any)): WSRequest = {
+  def withQueryParam(qparam: (String, Any)): HttpClientFinal = {
     val (name, value) = qparam
     val values = queryParams.get(name) match {
       case Some(vals) => vals :+ value.toString
@@ -202,19 +196,26 @@ case class WSRequest(
 
 case class WebSocketConnections[T](response: Future[WebSocketUpgradeResponse], materialized: T)
 
-case class WebSocketClientRequest(
+object WebSocketClient {
+  def apply(protocol: String, host: String, port: Int = 80)(implicit env: EnvLike = Env): WebSocketClientFinal = WebSocketClientFinal(env, protocol, host, port)
+}
+
+// TODO : rename
+case class WebSocketClientFinal(
   private val env: EnvLike,
+  protocol: String,
   host: String,
-  path: String,
+  port: Int,
+  path: String = "/",
   headers: Map[String, Seq[String]] = Map.empty[String, Seq[String]],
   queryParams: Map[String, Seq[String]] = Map.empty[String, Seq[String]]
 ) {
 
-  def withPath(path: String): WebSocketClientRequest = copy(path = path)
+  def withPath(path: String): WebSocketClientFinal = copy(path = path)
 
-  def withHeaders(headers: Map[String, Seq[String]]): WebSocketClientRequest = copy(headers = headers)
+  def withHeaders(headers: Map[String, Seq[String]]): WebSocketClientFinal = copy(headers = headers)
 
-  def withHeader(header: (String, String)): WebSocketClientRequest = {
+  def withHeader(header: (String, String)): WebSocketClientFinal = {
     val (name, value) = header
     headers.get(name) match {
       case Some(vals) => copy(headers = headers + (name -> (vals :+ value)))
@@ -222,9 +223,9 @@ case class WebSocketClientRequest(
     }
   }
 
-  def withQueryParams(queryParams: Map[String, Seq[String]]): WebSocketClientRequest = copy(queryParams = queryParams)
+  def withQueryParams(queryParams: Map[String, Seq[String]]): WebSocketClientFinal = copy(queryParams = queryParams)
 
-  def withQueryParam(qparam: (String, Any)): WebSocketClientRequest = {
+  def withQueryParam(qparam: (String, Any)): WebSocketClientFinal = {
     val (name, value) = qparam
     queryParams.get(name) match {
       case Some(vals) => copy(queryParams = queryParams + (name -> (vals :+ value.toString)))
@@ -232,9 +233,9 @@ case class WebSocketClientRequest(
     }
   }
 
-  def addPathSegment(value: String): WebSocketClientRequest = copy(path = s"$path/$value")
+  def addPathSegment(value: String): WebSocketClientFinal = copy(path = s"$path/$value")
 
-  def addPathSegment(value: Any): WebSocketClientRequest = copy(path = s"$path/${value.toString}")
+  def addPathSegment(value: Any): WebSocketClientFinal = copy(path = s"$path/${value.toString}")
 
   def callNoMat(flow: Processor[Message, Message])(implicit executionContext: ExecutionContext, materializer: Materializer): Future[WebSocketUpgradeResponse] = {
     callNoMat(Flow.fromProcessor(() => flow))
@@ -247,7 +248,7 @@ case class WebSocketClientRequest(
   def call[T](flow: Flow[Message, Message, T])(implicit executionContext: ExecutionContext, materializer: Materializer): WebSocketConnections[T] = {
     val _queryString = queryParams.toList.flatMap(tuple => tuple._2.map(v => tuple._1 + "=" + v)).mkString("&")
     val _headers = headers.toList.flatMap(tuple => tuple._2.map(v => RawHeader(tuple._1, v)))
-    val url: String = host + path.replace("//", "/") + (if (queryParams.isEmpty) "" else "?" + _queryString)
+    val url: String = protocol + "://" + host + ":" + port + path.replace("//", "/") + (if (queryParams.isEmpty) "" else "?" + _queryString)
     val request = _headers.foldLeft[WebSocketRequest](WebSocketRequest(url))((r, header) => r.copy(extraHeaders = r.extraHeaders :+ header))
     val (connected, closed) = env.websocketHttp.singleWebSocketRequest(request, flow)
     WebSocketConnections[T](connected, closed)
@@ -256,7 +257,7 @@ case class WebSocketClientRequest(
   def callNoMat(flow: Flow[Message, Message, _])(implicit executionContext: ExecutionContext, materializer: Materializer): Future[WebSocketUpgradeResponse] = {
     val _queryString = queryParams.toList.flatMap(tuple => tuple._2.map(v => tuple._1 + "=" + v)).mkString("&")
     val _headers = headers.toList.flatMap(tuple => tuple._2.map(v => RawHeader(tuple._1, v)))
-    val url = host + path.replace("//", "/") + (if (queryParams.isEmpty) "" else "?" + _queryString)
+    val url = protocol + "://" + host + ":" + port + path.replace("//", "/") + (if (queryParams.isEmpty) "" else "?" + _queryString)
     val request = _headers.foldLeft[WebSocketRequest](WebSocketRequest(url))((r, header) => r.copy(extraHeaders = r.extraHeaders :+ header))
     val (connected, _) = env.websocketHttp.singleWebSocketRequest(request, flow)
     connected

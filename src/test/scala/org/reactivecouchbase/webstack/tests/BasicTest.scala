@@ -9,12 +9,12 @@ import akka.http.scaladsl.model.HttpMethods
 import akka.http.scaladsl.model.ws.{Message, TextMessage}
 import akka.stream.actor.{ActorPublisher, ActorPublisherMessage}
 import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
-import org.reactivecouchbase.webstack.actions.{Action, ActionStep, FilterAction, Filter, RequestContext}
+import org.reactivecouchbase.webstack.actions.{Action, ActionStep, Filter, RequestContext}
 import org.reactivecouchbase.webstack.env.Env
 import org.reactivecouchbase.webstack.mvc.Controller
 import org.reactivecouchbase.webstack.result.Results
 import org.reactivecouchbase.webstack.websocket.{ActorFlow, WebSocketAction, WebSocketContext}
-import org.reactivecouchbase.webstack.ws.WS
+import org.reactivecouchbase.webstack.ws.{HttpClient, WebSocketClient}
 import org.reactivecouchbase.webstack.{BootstrappedContext, ClassPathDirectory, WebStackApp}
 import org.scalatest.{BeforeAndAfterAll, FlatSpec, Matchers}
 import play.api.libs.json.{JsObject, JsString, Json}
@@ -150,7 +150,7 @@ object MyController extends Controller {
   }
 
   def testWS = Action.async { ctx =>
-    WS.host("http://freegeoip.net").withPath("/json/")
+    HttpClient("http", "freegeoip.net").withPath("/json/")
       .call()
       .flatMap(_.body)
       .map(r => Json.prettyPrint(r.json))
@@ -158,7 +158,7 @@ object MyController extends Controller {
   }
 
   def testWS2 = Action.async { ctx =>
-    WS.host("http://freegeoip.net")
+    HttpClient("http", "freegeoip.net")
       .withPath("/json/")
       .withHeader("Sent-At", System.currentTimeMillis() + "")
       .call()
@@ -310,7 +310,7 @@ class BasicTestSpec extends FlatSpec with Matchers with BeforeAndAfterAll {
 
   "Webstack" should "be able to respond with simple text result" in {
     val future = for {
-      resp     <- WS.host(s"http://localhost:$port")
+      resp     <- HttpClient("http", "localhost", port)
                     .addPathSegment("sayhello")
                     .withHeader("Api-Key" -> "12345")
                     .call()
@@ -324,7 +324,7 @@ class BasicTestSpec extends FlatSpec with Matchers with BeforeAndAfterAll {
 
   "Webstack" should "be able to respond with a huge text result" in {
     val future = for {
-      resp     <- WS.host(s"http://localhost:$port")
+      resp     <- HttpClient("http", "localhost", port)
                     .addPathSegment("huge")
                     .withHeader("Api-Key" -> "12345")
                     .call()
@@ -338,7 +338,7 @@ class BasicTestSpec extends FlatSpec with Matchers with BeforeAndAfterAll {
 
   "Webstack" should "be able to respond with a SSE result" in {
     val future = for {
-      resp     <- WS.host(s"http://localhost:$port")
+      resp     <- HttpClient("http", "localhost", port)
                     .addPathSegment("sse")
                     .call()
       body     <- resp.body
@@ -354,7 +354,7 @@ class BasicTestSpec extends FlatSpec with Matchers with BeforeAndAfterAll {
 
   "Webstack" should "be able to respond with a SSE result from an actor" in {
     val future = for {
-      resp     <- WS.host(s"http://localhost:$port")
+      resp     <- HttpClient("http", "localhost", port)
                     .addPathSegment("sse")
                     .call()
       body     <- resp.body
@@ -371,7 +371,7 @@ class BasicTestSpec extends FlatSpec with Matchers with BeforeAndAfterAll {
 
   "Webstack" should "be able to respond with simple assets" in {
     val future = for {
-      resp     <- WS.host(s"http://localhost:$port")
+      resp     <- HttpClient("http", "localhost", port)
                     .addPathSegment("assets")
                     .addPathSegment("test.txt").call()
       body     <- resp.body
@@ -384,7 +384,7 @@ class BasicTestSpec extends FlatSpec with Matchers with BeforeAndAfterAll {
 
   "Webstack" should "be able to respond with a path param result" in {
     val future = for {
-      resp     <- WS.host(s"http://localhost:$port")
+      resp     <- HttpClient("http", "localhost", port)
                     .addPathSegment("hello")
                     .addPathSegment("Mathieu")
                     .withHeader("Api-Key" -> "12345")
@@ -399,7 +399,7 @@ class BasicTestSpec extends FlatSpec with Matchers with BeforeAndAfterAll {
 
   "Webstack" should "be able to respond with simple json result" in {
     val future = for {
-      resp     <- WS.host(s"http://localhost:$port")
+      resp     <- HttpClient("http", "localhost", port)
                     .addPathSegment("json")
                     .withHeader("Api-Key" -> "12345")
                     .call()
@@ -413,7 +413,7 @@ class BasicTestSpec extends FlatSpec with Matchers with BeforeAndAfterAll {
 
   "Webstack" should "be able to respond with simple html result" in {
     val future = for {
-      resp     <- WS.host(s"http://localhost:$port")
+      resp     <- HttpClient("http", "localhost", port)
                     .addPathSegment("html")
                     .withHeader("Api-Key" -> "12345")
                     .call()
@@ -427,7 +427,7 @@ class BasicTestSpec extends FlatSpec with Matchers with BeforeAndAfterAll {
 
   "Webstack" should "be able to respond with simple template result" in {
     val future = for {
-      resp     <- WS.host(s"http://localhost:$port")
+      resp     <- HttpClient("http", "localhost", port)
                     .addPathSegment("template")
                     .withQueryParam("who", "Billy")
                     .withHeader("Api-Key" -> "12345")
@@ -443,7 +443,7 @@ class BasicTestSpec extends FlatSpec with Matchers with BeforeAndAfterAll {
   "Webstack" should "be able to respond to a post request" in {
     val uuid = UUID.randomUUID().toString
     val future = for {
-      resp     <- WS.host(s"http://localhost:$port")
+      resp     <- HttpClient("http", "localhost", port)
                     .addPathSegment("post")
                     .withMethod(HttpMethods.POST)
                     .withBody(Json.obj("uuid" -> uuid))
@@ -458,7 +458,7 @@ class BasicTestSpec extends FlatSpec with Matchers with BeforeAndAfterAll {
 
   "Webstack" should "be able to respond with WS json response" in {
     val future = for {
-      resp     <- WS.host(s"http://localhost:$port")
+      resp     <- HttpClient("http", "localhost", port)
                     .addPathSegment("ws")
                     .call()
       body     <- resp.body
@@ -475,7 +475,7 @@ class BasicTestSpec extends FlatSpec with Matchers with BeforeAndAfterAll {
 
   "Webstack" should "be able to respond with WS json response from query param" in {
     val future = for {
-      resp     <- WS.host(s"http://localhost:$port")
+      resp     <- HttpClient("http", "localhost", port)
                     .addPathSegment("ws")
                     .withQueryParam("q", "81.246.24.51")
                     .call()
@@ -497,7 +497,7 @@ class BasicTestSpec extends FlatSpec with Matchers with BeforeAndAfterAll {
     val sink = Sink.head[Message]
     val source = jsonSource(Json.obj("hello" ->"world"), 100)
     val flow = Flow.fromSinkAndSourceMat(sink, source)(Keep.left[Future[Message], Cancellable])
-    val future = WS.webSocketHost("ws://echo.websocket.org/").call(flow).materialized.map { message =>
+    val future = WebSocketClient("ws", "echo.websocket.org").call(flow).materialized.map { message =>
       Json.parse(message.asTextMessage.getStrictText).as[JsObject]
     }
     val jsonBody = future.await
@@ -508,7 +508,7 @@ class BasicTestSpec extends FlatSpec with Matchers with BeforeAndAfterAll {
     val sink = Sink.head[Message]
     val source = jsonSource(Json.obj("hello" ->"world"), 100)
     val flow: Flow[Message, Message, Future[Message]] = Flow.fromSinkAndSourceMat(sink, source)(Keep.left[Future[Message], Cancellable])
-    val future = WS.webSocketHost(s"ws://localhost:$port")
+    val future = WebSocketClient("ws", s"localhost", port)
         .addPathSegment("websocket")
         .addPathSegment("Mathieu")
         .call(flow)
@@ -525,7 +525,7 @@ class BasicTestSpec extends FlatSpec with Matchers with BeforeAndAfterAll {
     val sink = Sink.head[Message]
     val source = jsonSource(Json.obj("hello" ->"world"), 100)
     val flow: Flow[Message, Message, Future[Message]] = Flow.fromSinkAndSourceMat(sink, source)(Keep.left[Future[Message], Cancellable])
-    val future = WS.webSocketHost(s"ws://localhost:$port")
+    val future = WebSocketClient("ws", s"localhost", port)
         .addPathSegment("websocketping")
         .call(flow)
         .materialized
@@ -540,7 +540,7 @@ class BasicTestSpec extends FlatSpec with Matchers with BeforeAndAfterAll {
     implicit val system = Env.defaultActorSystem
     val promise = Promise[Seq[Message]]
     val flow = ActorFlow.actorRef(out => WebSocketClientActor.props(out, promise))
-    WS.webSocketHost(s"ws://localhost:$port").addPathSegment("websocketping").callNoMat(flow)
+    WebSocketClient("ws", s"localhost", port).addPathSegment("websocketping").callNoMat(flow)
     val messages = promise.future.await.map(_.asTextMessage.getStrictText)
     assert(Seq("chunk", "chunk", "chunk", "chunk", "chunk", "chunk", "chunk", "chunk", "chunk", "chunk") == messages)
   }
@@ -549,7 +549,7 @@ class BasicTestSpec extends FlatSpec with Matchers with BeforeAndAfterAll {
     val sink = Sink.head[Message]
     val source = jsonSource(Json.obj("hello" ->"world"), 100)
     val flow: Flow[Message, Message, Future[Message]] = Flow.fromSinkAndSourceMat(sink, source)(Keep.left[Future[Message], Cancellable])
-    val future = WS.webSocketHost(s"ws://localhost:$port")
+    val future = WebSocketClient("ws", s"localhost", port)
         .addPathSegment("websocketsimple")
         .call(flow)
         .materialized
