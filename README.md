@@ -251,7 +251,7 @@ An http client with streaming capabilities is available too
 import org.reactivecouchbase.webstack.actions.Action
 import org.reactivecouchbase.webstack.env.Env
 import org.reactivecouchbase.webstack.result.Results._
-import org.reactivecouchbase.webstack.ws.WS
+import org.reactivecouchbase.webstack.ws._
 
 object MyController {
 
@@ -259,7 +259,7 @@ object MyController {
   implicit val mat = Env.defaultMaterializer
 
   def location = Action.async { ctx =>
-    WS.host("http://freegeoip.net").withPath("/json/")
+    HttpClient("http", "freegeoip.net").withPath("/json/")
       .call()
       .flatMap(_.body)
       .map(b => Json.obj("processed_at" -> System.currentTimeMillis) ++ b.as[JsObject])
@@ -277,7 +277,7 @@ You can also consume WebSocket from the WS client
 import org.reactivecouchbase.webstack.actions.Action
 import org.reactivecouchbase.webstack.env.Env
 import org.reactivecouchbase.webstack.result.Results._
-import org.reactivecouchbase.webstack.ws.WS
+import org.reactivecouchbase.webstack.ws._
 
 object MyController {
 
@@ -288,7 +288,7 @@ object MyController {
     val sink = Sink.head[Message]
     val source = Source.single("Hello World!")
     val flow = Flow.fromSinkAndSourceMat(sink, source)(Keep.left[Future[Message], Cancellable])
-    WS.webSocketHost("ws://echo.websocket.org/").call(flow).materialized.map { message =>
+    WebSocketClient("ws", "echo.websocket.org").call(flow).materialized.map { message =>
       Ok.text(message.asTextMessage.getStrictText)
     }
   }
