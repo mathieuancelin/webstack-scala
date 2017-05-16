@@ -1,10 +1,8 @@
+organization := "org.reactivecouchbase.webstack"
 name := """webstack-core-scala"""
-
 version := "0.1.0-SNAPSHOT"
 
 scalaVersion := "2.11.8"
-
-organization := "org.reactivecouchbase.webstack"
 
 libraryDependencies ++= Seq(
   "io.undertow" % "undertow-core" % "1.4.6.Final",
